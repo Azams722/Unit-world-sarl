@@ -1,0 +1,6 @@
+{
+  "name": "Unitworld Sarl - Global Marketplace & ERP",
+  "description": "Premier e-commerce marketplace and ERP for Unitworld Sarl featuring vehicles, fashion, electronics, real-time inventory management, Paystack checkout, and comprehensive customer & admin portals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

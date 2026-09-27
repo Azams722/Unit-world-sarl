@@ -1,0 +1,242 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Marketplace item including automobiles, fashion, electronics, and groceries",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique product identifier"
+        },
+        "title": {
+          "type": "string",
+          "description": "Product display title",
+          "maxLength": 200
+        },
+        "description": {
+          "type": "string",
+          "description": "Full product description and vehicle condition report",
+          "maxLength": 4000
+        },
+        "price": {
+          "type": "number",
+          "description": "Product price in Nigerian Naira (NGN)"
+        },
+        "originalPrice": {
+          "type": "number",
+          "description": "Optional strike-through original price"
+        },
+        "category": {
+          "type": "string",
+          "description": "Primary department category",
+          "maxLength": 60
+        },
+        "condition": {
+          "type": "string",
+          "description": "Vehicle or item condition (e.g. Registered, Tokunbo, Brand New)",
+          "maxLength": 50
+        },
+        "stock": {
+          "type": "number",
+          "description": "Real-time inventory level"
+        },
+        "sku": {
+          "type": "string",
+          "description": "Stock keeping unit identifier",
+          "maxLength": 50
+        },
+        "seller": {
+          "type": "string",
+          "description": "Merchant or dealership name",
+          "maxLength": 100
+        },
+        "location": {
+          "type": "string",
+          "description": "Physical inspection location or warehouse",
+          "maxLength": 100
+        },
+        "rating": {
+          "type": "number",
+          "description": "Average review score"
+        },
+        "reviewCount": {
+          "type": "number",
+          "description": "Total customer ratings count"
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "Whether item is featured on homepage showcase"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp ISO string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp ISO string"
+        }
+      },
+      "required": ["title", "description", "price", "category", "stock"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase transaction with ERP tracking and Paystack integration",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique order identifier"
+        },
+        "orderNumber": {
+          "type": "string",
+          "description": "Human-readable order tracking number",
+          "maxLength": 40
+        },
+        "userId": {
+          "type": "string",
+          "description": "Buyer's user UID",
+          "maxLength": 128
+        },
+        "customerEmail": {
+          "type": "string",
+          "description": "Buyer's contact email",
+          "maxLength": 150
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Buyer's full name",
+          "maxLength": 150
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Buyer's contact phone number",
+          "maxLength": 30
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Item subtotal in NGN"
+        },
+        "shippingFee": {
+          "type": "number",
+          "description": "Logistics fee in NGN"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total payable amount in NGN"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment channel used",
+          "maxLength": 50
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "Current payment settlement state",
+          "maxLength": 30
+        },
+        "paystackReference": {
+          "type": "string",
+          "description": "Paystack transaction reference ID",
+          "maxLength": 100
+        },
+        "orderStatus": {
+          "type": "string",
+          "description": "Fulfillment progression status",
+          "maxLength": 30
+        },
+        "trackingNumber": {
+          "type": "string",
+          "description": "Shipment carrier tracking code",
+          "maxLength": 60
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Order creation date ISO"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Order modification date ISO"
+        }
+      },
+      "required": ["userId", "orderNumber", "customerEmail", "totalAmount", "orderStatus", "paymentStatus"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Customer and administrator profile settings, addresses, and multi-factor auth config",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User UID"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 150
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Customer display name",
+          "maxLength": 150
+        },
+        "role": {
+          "type": "string",
+          "description": "Access control role: admin or customer",
+          "maxLength": 30
+        },
+        "mfaEnabled": {
+          "type": "boolean",
+          "description": "Whether 2-Factor Authentication is enabled"
+        },
+        "phone": {
+          "type": "string",
+          "description": "User phone number",
+          "maxLength": 30
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration date"
+        }
+      },
+      "required": ["email"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Platform configurations including Paystack API gateway keys",
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Setting key identifier"
+        },
+        "paystackPublicKey": {
+          "type": "string",
+          "description": "Public key for client-side Paystack popup transactions"
+        },
+        "paystackEnabled": {
+          "type": "boolean",
+          "description": "Whether Paystack gateway is active"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Global marketplace product catalog"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer order records and ERP fulfillment tracking"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User accounts, preferences, and authentication metadata"
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Marketplace global settings and payment configurations"
+    }
+  }
+}
