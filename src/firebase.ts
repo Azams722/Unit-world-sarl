@@ -394,6 +394,153 @@ export async function updateOrderStatusInDb(orderId: string, status: Order['orde
 }
 
 // 5. User Profile & Settings
+export const INITIAL_USERS: UserProfile[] = [
+  {
+    uid: 'user-tobi-admin',
+    email: 'tobi@acourze.com',
+    displayName: 'Tobi Acourze',
+    phone: '+234 800 8648 967',
+    role: 'admin',
+    mfaEnabled: true,
+    status: 'active',
+    addresses: [
+      {
+        id: 'addr-1',
+        fullName: 'Tobi Acourze',
+        phone: '+234 800 8648 967',
+        street: '14B Admiralty Way, Lekki Phase 1',
+        city: 'Lagos',
+        state: 'Lagos State',
+        isDefault: true
+      }
+    ],
+    preferences: {
+      currency: 'NGN',
+      emailNotifications: true,
+      smsNotifications: true,
+      whatsappAlerts: true,
+    },
+    createdAt: '2025-01-10T08:30:00.000Z',
+    lastLoginAt: '2026-09-27T06:45:00.000Z'
+  },
+  {
+    uid: 'user-chidi-buyer',
+    email: 'chidi.okonkwo@gmail.com',
+    displayName: 'Chidi Okonkwo',
+    phone: '+234 803 241 8892',
+    role: 'customer',
+    mfaEnabled: false,
+    status: 'active',
+    addresses: [
+      {
+        id: 'addr-2',
+        fullName: 'Chidi Okonkwo',
+        phone: '+234 803 241 8892',
+        street: 'Plot 7, Victoria Island Business District',
+        city: 'Lagos',
+        state: 'Lagos State',
+        isDefault: true
+      }
+    ],
+    preferences: {
+      currency: 'NGN',
+      emailNotifications: true,
+      smsNotifications: true,
+      whatsappAlerts: true,
+    },
+    createdAt: '2025-02-14T11:20:00.000Z',
+    lastLoginAt: '2026-09-26T19:10:00.000Z'
+  },
+  {
+    uid: 'user-amina-kano',
+    email: 'amina.bello@yahoo.com',
+    displayName: 'Amina Bello',
+    phone: '+234 802 887 4120',
+    role: 'customer',
+    mfaEnabled: false,
+    status: 'active',
+    addresses: [
+      {
+        id: 'addr-3',
+        fullName: 'Amina Bello',
+        phone: '+234 802 887 4120',
+        street: '22 Bompai Road, Nassarawa GRA',
+        city: 'Kano',
+        state: 'Kano State',
+        isDefault: true
+      }
+    ],
+    preferences: {
+      currency: 'NGN',
+      emailNotifications: true,
+      smsNotifications: true,
+      whatsappAlerts: false,
+    },
+    createdAt: '2025-03-01T14:15:00.000Z',
+    lastLoginAt: '2026-09-25T16:22:00.000Z'
+  },
+  {
+    uid: 'user-emeka-motors',
+    email: 'emeka.nnamdi@outlook.com',
+    displayName: 'Emeka Nnamdi',
+    phone: '+234 814 559 0311',
+    role: 'customer',
+    mfaEnabled: true,
+    status: 'active',
+    addresses: [
+      {
+        id: 'addr-4',
+        fullName: 'Emeka Nnamdi',
+        phone: '+234 814 559 0311',
+        street: '55 Isaac John Street, Ikeja GRA',
+        city: 'Lagos',
+        state: 'Lagos State',
+        isDefault: true
+      }
+    ],
+    preferences: {
+      currency: 'NGN',
+      emailNotifications: true,
+      smsNotifications: true,
+      whatsappAlerts: true,
+    },
+    createdAt: '2025-03-12T09:40:00.000Z',
+    lastLoginAt: '2026-09-27T05:12:00.000Z'
+  }
+];
+
+export async function getAllUsersFromDb(): Promise<UserProfile[]> {
+  const path = 'users';
+  let dbUsers: UserProfile[] = [];
+  try {
+    const snapshot = await getDocs(collection(db, path));
+    if (!snapshot.empty) {
+      snapshot.forEach(docSnap => dbUsers.push(docSnap.data() as UserProfile));
+    }
+  } catch (err) {
+    console.warn('Get users from Firestore notice:', err);
+  }
+
+  // Retrieve cached local users
+  let localUsers: UserProfile[] = [];
+  try {
+    const raw = localStorage.getItem('unitworld_registered_users');
+    if (raw) {
+      localUsers = JSON.parse(raw);
+    }
+  } catch (e) {
+    // Ignore JSON error
+  }
+
+  // Merge unique by uid or email
+  const userMap = new Map<string, UserProfile>();
+  INITIAL_USERS.forEach(u => userMap.set(u.uid, u));
+  localUsers.forEach(u => userMap.set(u.uid, u));
+  dbUsers.forEach(u => userMap.set(u.uid, u));
+
+  return Array.from(userMap.values());
+}
+
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const path = `users/${uid}`;
   try {
@@ -401,19 +548,44 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (snap.exists()) {
       return snap.data() as UserProfile;
     }
-    return null;
   } catch (error) {
     console.warn('Get user profile error:', error);
-    return null;
   }
+
+  // Fallback to local cache
+  try {
+    const raw = localStorage.getItem('unitworld_registered_users');
+    if (raw) {
+      const list: UserProfile[] = JSON.parse(raw);
+      const found = list.find(u => u.uid === uid);
+      if (found) return found;
+    }
+  } catch (e) {}
+
+  const defaultUser = INITIAL_USERS.find(u => u.uid === uid);
+  return defaultUser || null;
 }
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
   const path = `users/${profile.uid}`;
+  
+  // Always update local cache immediately so it's instant in Admin Portal
+  try {
+    const raw = localStorage.getItem('unitworld_registered_users');
+    let list: UserProfile[] = raw ? JSON.parse(raw) : [...INITIAL_USERS];
+    const index = list.findIndex(u => u.uid === profile.uid || u.email.toLowerCase() === profile.email.toLowerCase());
+    if (index >= 0) {
+      list[index] = { ...list[index], ...profile };
+    } else {
+      list.unshift(profile);
+    }
+    localStorage.setItem('unitworld_registered_users', JSON.stringify(list));
+  } catch (e) {}
+
   try {
     await setDoc(doc(db, 'users', profile.uid), profile, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn('Firestore user profile save notice:', error);
   }
 }
 

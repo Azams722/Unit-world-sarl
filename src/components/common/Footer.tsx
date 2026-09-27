@@ -4,9 +4,10 @@ import { UnitworldLogo } from './UnitworldLogo';
 
 interface FooterProps {
   logoUrl?: string;
+  onOpenAdmin?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
+export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin }) => {
   return (
     <footer className="bg-slate-900 text-slate-300 border-t border-slate-800">
       {/* Trust Pillars Strip */}
@@ -123,6 +124,18 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
             <span>Terms of Service</span>
             <span>·</span>
             <span>Escrow & Inspection Agreement</span>
+            {onOpenAdmin && (
+              <>
+                <span>·</span>
+                <button
+                  onClick={onOpenAdmin}
+                  className="text-slate-600 hover:text-slate-400 text-xs transition-colors cursor-pointer"
+                  title="Staff Portal (Ctrl+Shift+A)"
+                >
+                  Staff Portal
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -24,7 +24,6 @@ interface HeaderProps {
   onOpenAuth: () => void;
   onSignOut: () => void;
   onOpenDashboard: () => void;
-  onOpenAdmin: () => void;
   onSelectCategory: (category: string) => void;
   selectedCategory: string;
   searchQuery: string;
@@ -41,7 +40,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuth,
   onSignOut,
   onOpenDashboard,
-  onOpenAdmin,
   onSelectCategory,
   selectedCategory,
   searchQuery,
@@ -219,19 +217,6 @@ export const Header: React.FC<HeaderProps> = ({
                         Track Deliveries
                       </button>
 
-                      {currentUser.role === 'admin' && (
-                        <button
-                          onClick={() => {
-                            setUserDropdownOpen(false);
-                            onOpenAdmin();
-                          }}
-                          className="w-full text-left px-4 py-2 text-xs font-semibold text-sky-700 bg-sky-50/60 hover:bg-sky-100 flex items-center gap-2"
-                        >
-                          <LayoutDashboard className="w-4 h-4 text-sky-600" />
-                          ERP Admin Portal
-                        </button>
-                      )}
-
                       <div className="border-t border-slate-100 my-1"></div>
 
                       <button
@@ -335,18 +320,6 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="py-3 border-b border-slate-100 space-y-2">
-              {currentUser?.role === 'admin' && (
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenAdmin();
-                  }}
-                  className="w-full text-left px-3 py-2 bg-sky-50 text-[#0284C7] font-semibold text-xs rounded-lg flex items-center gap-2"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  ERP Inventory & Orders Portal
-                </button>
-              )}
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);

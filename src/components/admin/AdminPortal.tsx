@@ -15,27 +15,32 @@ import {
   AlertTriangle, 
   Search, 
   CheckCircle2, 
-  RefreshCw,
-  Eye,
-  Building,
-  Sliders,
-  Image as ImageIcon,
-  Tag,
-  Star,
-  ListPlus,
-  ArrowUp,
-  ArrowLeft,
-  ArrowRight,
-  Sparkles,
-  MapPin,
-  ShieldCheck,
-  UserCheck,
-  UserPlus,
-  EyeOff,
-  Award,
-  Layers
+  RefreshCw, 
+  Eye, 
+  Building, 
+  Sliders, 
+  Image as ImageIcon, 
+  Tag, 
+  Star, 
+  ListPlus, 
+  ArrowUp, 
+  ArrowLeft, 
+  ArrowRight, 
+  Sparkles, 
+  MapPin, 
+  ShieldCheck, 
+  UserCheck, 
+  UserPlus, 
+  EyeOff, 
+  Award, 
+  Layers,
+  Users,
+  Upload,
+  Mail,
+  Phone,
+  ExternalLink
 } from 'lucide-react';
-import { Product, Order, GatewaySettings, BrandSettings, OrderStatus, AdminUser } from '../../types';
+import { Product, Order, GatewaySettings, BrandSettings, OrderStatus, AdminUser, UserProfile } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { CATEGORIES } from '../../data/initialProducts';
 import { UnitworldLogo } from '../common/UnitworldLogo';
@@ -43,7 +48,6 @@ import { DEFAULT_BRAND_LOGO } from '../../firebase';
 
 const PRESET_IMAGE_ASSETS = [
   { label: '2025 Land Cruiser VXR Front', url: '/src/assets/images/car_landcruiser_vxr_1790462842346.jpg' },
-  { label: 'Luxury Car Interior Cabin', url: 'https://images.unsplash.com/photo-1594502184342-2e12f877aa73?auto=format&fit=crop&w=1000&q=80' },
   { label: '2021 Highlander XSE Exterior', url: '/src/assets/images/car_highlander_xse_1790462851011.jpg' },
   { label: '2017 Lexus RX350 Luxury', url: '/src/assets/images/car_lexus_rx350_1790462861358.jpg' },
   { label: '2010 Toyota Camry Toks', url: '/src/assets/images/car_camry_2010_1790462872857.jpg' },
@@ -64,6 +68,7 @@ interface AdminPortalProps {
   onClose: () => void;
   products: Product[];
   orders: Order[];
+  users: UserProfile[];
   gatewaySettings: GatewaySettings;
   brandSettings: BrandSettings;
   admins: AdminUser[];
@@ -78,6 +83,7 @@ interface AdminPortalProps {
   onRemoveAdmin: (adminId: string) => Promise<void>;
   onToggleAdminStatus: (adminId: string, isActive: boolean) => Promise<void>;
   onMakeCurrentUserAdmin?: () => void;
+  onUpdateUser?: (updated: UserProfile) => Promise<void>;
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({
@@ -85,6 +91,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onClose,
   products,
   orders,
+  users,
   gatewaySettings,
   brandSettings,
   admins,
@@ -99,10 +106,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onRemoveAdmin,
   onToggleAdminStatus,
   onMakeCurrentUserAdmin,
+  onUpdateUser,
 }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders' | 'admins' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders' | 'users' | 'admins' | 'settings'>('products');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccessMsg, setSyncSuccessMsg] = useState('');
+
+  // User management states
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'customer' | 'admin'>('all');
+  const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
+  const [userSuccessMsg, setUserSuccessMsg] = useState('');
 
   // Product CRUD states
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -270,6 +284,22 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       setFormImages(prev => [...prev, trimmed]);
     }
     setNewImageUrl('');
+  };
+
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result && !formImages.includes(result)) {
+          setFormImages((prev) => [...prev, result]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
   };
 
   const handleRemoveImage = (index: number) => {
@@ -641,6 +671,22 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           >
             <ShoppingCart className="w-4 h-4" />
             <span>Orders & Dispatch ({orders.length})</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('users');
+              setEditingProduct(null);
+              setIsCreatingProduct(false);
+            }}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'users'
+                ? 'border-[#0284C7] text-[#0284C7] bg-white'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Users className="w-4 h-4 text-sky-600" />
+            <span>Users & Signups ({users.length})</span>
           </button>
 
           <button
@@ -1321,8 +1367,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         </div>
                       )}
 
-                      {/* Add Image URL Row */}
-                      <div className="pt-2 flex gap-2">
+                      {/* Add Image URL & File Upload Row */}
+                      <div className="pt-2 flex flex-col sm:flex-row gap-2">
                         <input
                           type="text"
                           value={newImageUrl}
@@ -1334,11 +1380,23 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           type="button"
                           onClick={() => handleAddImage(newImageUrl)}
                           disabled={!newImageUrl.trim()}
-                          className="py-2 px-3.5 bg-[#0284C7] hover:bg-[#0369a1] disabled:bg-slate-300 text-white font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer shadow-2xs"
+                          className="py-2 px-3.5 bg-[#0284C7] hover:bg-[#0369a1] disabled:bg-slate-300 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>Add to Gallery</span>
+                          <span>Add URL</span>
                         </button>
+
+                        <label className="py-2 px-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
+                          <Upload className="w-3.5 h-3.5 text-sky-400" />
+                          <span>Upload From Device</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={handleImageFileUpload}
+                          />
+                        </label>
                       </div>
 
                       {/* Presets */}
@@ -1939,6 +1997,302 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             </div>
           )}
 
+          {/* TAB: USERS & SIGNUPS SECTION */}
+          {activeTab === 'users' && (
+            <div className="space-y-6">
+              {/* Header Banner */}
+              <div className="p-5 bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white rounded-2xl shadow-md border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-6 h-6 text-sky-400" />
+                    <h3 className="text-base font-black uppercase tracking-tight">
+                      Customer Accounts & Registered Sign-ups ({users.length})
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                    View and manage all shoppers who registered on Unitworld Sarl. Inspect order histories, delivery addresses, verify credentials, and manage role permissions.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="bg-sky-500/20 text-sky-300 border border-sky-400/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-sky-400" />
+                    Live Firestore User Sync
+                  </span>
+                </div>
+              </div>
+
+              {/* Metric Overview Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Registered Accounts</span>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{users.length}</p>
+                  <p className="text-[11px] text-sky-600 font-semibold mt-1">Direct Signups & Google Auth</p>
+                </div>
+
+                <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Shopper / Customer Accounts</span>
+                  <p className="text-2xl font-black text-slate-900 mt-1">
+                    {users.filter(u => u.role !== 'admin').length}
+                  </p>
+                  <p className="text-[11px] text-emerald-600 font-semibold mt-1">Active Buying Customers</p>
+                </div>
+
+                <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Staff & Admin Users</span>
+                  <p className="text-2xl font-black text-slate-900 mt-1">
+                    {users.filter(u => u.role === 'admin').length}
+                  </p>
+                  <p className="text-[11px] text-purple-600 font-semibold mt-1">With Management Privileges</p>
+                </div>
+
+                <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Orders Handled</span>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{orders.length}</p>
+                  <p className="text-[11px] text-amber-600 font-semibold mt-1">Across all user accounts</p>
+                </div>
+              </div>
+
+              {/* Search & Filter Toolbar */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, email, phone, UID..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-sky-500"
+                  />
+                  {userSearch && (
+                    <button
+                      onClick={() => setUserSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+                  <span className="text-xs font-semibold text-slate-500 mr-1 hidden sm:inline">Role:</span>
+                  {(['all', 'customer', 'admin'] as const).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setUserRoleFilter(r)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize transition-colors cursor-pointer whitespace-nowrap ${
+                        userRoleFilter === r
+                          ? 'bg-[#0284C7] text-white shadow-2xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {r === 'all' ? 'All Roles' : `${r}s`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Users Table */}
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100/80 text-slate-600 border-b border-slate-200 uppercase font-mono text-[10px]">
+                      <tr>
+                        <th className="p-3.5">Customer / User</th>
+                        <th className="p-3.5">Email & Phone</th>
+                        <th className="p-3.5">Role</th>
+                        <th className="p-3.5">Date Registered</th>
+                        <th className="p-3.5">Orders & Spend</th>
+                        <th className="p-3.5">Saved Addresses</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {users
+                        .filter((u) => {
+                          const q = userSearch.toLowerCase();
+                          const matchesSearch =
+                            !q ||
+                            u.displayName?.toLowerCase().includes(q) ||
+                            u.email?.toLowerCase().includes(q) ||
+                            u.phone?.toLowerCase().includes(q) ||
+                            u.uid?.toLowerCase().includes(q);
+                          const matchesRole =
+                            userRoleFilter === 'all' || u.role === userRoleFilter;
+                          return matchesSearch && matchesRole;
+                        })
+                        .map((u) => {
+                          const userOrders = orders.filter(
+                            (o) =>
+                              o.userId === u.uid ||
+                              o.customerEmail.toLowerCase() === u.email.toLowerCase()
+                          );
+                          const totalSpent = userOrders.reduce(
+                            (sum, o) => sum + (o.totalAmount || 0),
+                            0
+                          );
+                          const initials = (u.displayName || u.email || 'UW')
+                            .slice(0, 2)
+                            .toUpperCase();
+
+                          return (
+                            <tr key={u.uid} className="hover:bg-sky-50/40 transition-colors">
+                              {/* Name & Avatar */}
+                              <td className="p-3.5">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-500 to-sky-700 text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs shrink-0">
+                                    {initials}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-slate-900 leading-tight">
+                                      {u.displayName || u.email.split('@')[0]}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                      ID: {u.uid.slice(0, 14)}...
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Email & Phone */}
+                              <td className="p-3.5">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1.5 text-slate-800 font-medium">
+                                    <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                                    <span>{u.email}</span>
+                                  </div>
+                                  {u.phone ? (
+                                    <div className="flex items-center gap-1.5 text-slate-600 text-[11px]">
+                                      <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                                      <span>{u.phone}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-400 italic">No phone attached</span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Role */}
+                              <td className="p-3.5">
+                                {u.role === 'admin' ? (
+                                  <span className="bg-purple-100 text-purple-800 font-bold text-[10px] px-2.5 py-1 rounded-full uppercase flex items-center gap-1 w-fit border border-purple-200">
+                                    <ShieldCheck className="w-3 h-3 text-purple-600" />
+                                    Admin
+                                  </span>
+                                ) : (
+                                  <span className="bg-sky-100 text-sky-800 font-bold text-[10px] px-2.5 py-1 rounded-full uppercase flex items-center gap-1 w-fit border border-sky-200">
+                                    <UserCheck className="w-3 h-3 text-sky-600" />
+                                    Customer
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Registered Date */}
+                              <td className="p-3.5 text-slate-600">
+                                {formatDate(u.createdAt)}
+                              </td>
+
+                              {/* Orders & Spend */}
+                              <td className="p-3.5">
+                                <div>
+                                  <span className="font-bold text-slate-900">
+                                    {userOrders.length} {userOrders.length === 1 ? 'Order' : 'Orders'}
+                                  </span>
+                                  {totalSpent > 0 && (
+                                    <p className="text-[11px] font-black text-emerald-700">
+                                      {formatCurrency(totalSpent)}
+                                    </p>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Saved Addresses */}
+                              <td className="p-3.5">
+                                {u.addresses && u.addresses.length > 0 ? (
+                                  <div className="text-slate-700">
+                                    <span className="font-semibold text-slate-900">
+                                      {u.addresses[0].city}, {u.addresses[0].state}
+                                    </span>
+                                    {u.addresses.length > 1 && (
+                                      <span className="text-[10px] text-slate-500 block">
+                                        +{u.addresses.length - 1} more address
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400 italic text-[11px]">No addresses</span>
+                                )}
+                              </td>
+
+                              {/* Status */}
+                              <td className="p-3.5">
+                                <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded-full">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                  {u.status || 'Active'}
+                                </span>
+                              </td>
+
+                              {/* Action Buttons */}
+                              <td className="p-3.5 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => setSelectedUserForModal(u)}
+                                    className="py-1.5 px-3 bg-sky-50 hover:bg-sky-100 text-[#0284C7] font-bold rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                                    title="View full account details & order history"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    <span>Details</span>
+                                  </button>
+
+                                  {onUpdateUser && (
+                                    <button
+                                      onClick={async () => {
+                                        const newRole = u.role === 'admin' ? 'customer' : 'admin';
+                                        const confirmMsg = u.role === 'admin' 
+                                          ? `Revoke Admin privileges for ${u.displayName || u.email}?`
+                                          : `Promote ${u.displayName || u.email} to Administrator?`;
+                                        if (confirm(confirmMsg)) {
+                                          await onUpdateUser({ ...u, role: newRole });
+                                          setUserSuccessMsg(`Role for ${u.displayName || u.email} updated to ${newRole}.`);
+                                          setTimeout(() => setUserSuccessMsg(''), 4000);
+                                        }
+                                      }}
+                                      className="p-1.5 text-slate-500 hover:text-slate-900 rounded-md hover:bg-slate-100 cursor-pointer"
+                                      title={u.role === 'admin' ? 'Revert to Customer' : 'Make Admin'}
+                                    >
+                                      {u.role === 'admin' ? (
+                                        <EyeOff className="w-3.5 h-3.5 text-purple-600" />
+                                      ) : (
+                                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {users.length === 0 && (
+                  <div className="p-8 text-center text-slate-400">
+                    No users registered yet.
+                  </div>
+                )}
+              </div>
+
+              {userSuccessMsg && (
+                <div className="p-3 bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                  <span>{userSuccessMsg}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* TAB 4: ANALYTICS & GMV */}
           {activeTab === 'analytics' && (
             <div className="space-y-6">
@@ -2183,6 +2537,149 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             </div>
           )}
         </div>
+
+        {/* USER ACCOUNT DETAIL MODAL */}
+        {selectedUserForModal && (
+          <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-sky-600 text-white flex items-center justify-center font-black text-sm uppercase">
+                    {(selectedUserForModal.displayName || selectedUserForModal.email).slice(0, 2)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                      {selectedUserForModal.displayName || selectedUserForModal.email.split('@')[0]}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-mono">UID: {selectedUserForModal.uid}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedUserForModal(null)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 overflow-y-auto space-y-6 text-xs">
+                {/* Account overview */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="font-semibold text-slate-500">Email Address</span>
+                    <p className="font-bold text-slate-900 mt-0.5">{selectedUserForModal.email}</p>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="font-semibold text-slate-500">Phone Number</span>
+                    <p className="font-bold text-slate-900 mt-0.5">
+                      {selectedUserForModal.phone || 'Not specified'}
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="font-semibold text-slate-500">Role Status</span>
+                    <p className="font-bold text-slate-900 mt-0.5 capitalize">
+                      {selectedUserForModal.role}
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="font-semibold text-slate-500">Joined Date</span>
+                    <p className="font-bold text-slate-900 mt-0.5">
+                      {formatDate(selectedUserForModal.createdAt)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Saved Delivery Addresses */}
+                <div>
+                  <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] mb-2 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                    Saved Delivery Addresses ({selectedUserForModal.addresses?.length || 0})
+                  </h4>
+                  {selectedUserForModal.addresses && selectedUserForModal.addresses.length > 0 ? (
+                    <div className="space-y-2">
+                      {selectedUserForModal.addresses.map((addr) => (
+                        <div key={addr.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                          <div className="flex items-center justify-between font-bold text-slate-800">
+                            <span>{addr.fullName}</span>
+                            <span className="text-slate-500 font-normal">{addr.phone}</span>
+                          </div>
+                          <p className="text-slate-600 mt-1">
+                            {addr.street}, {addr.city}, {addr.state}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-400 italic">
+                      No delivery addresses registered yet.
+                    </p>
+                  )}
+                </div>
+
+                {/* Order History */}
+                <div>
+                  <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] mb-2 flex items-center gap-1.5">
+                    <ShoppingCart className="w-3.5 h-3.5 text-[#0284C7]" />
+                    Order History for this User
+                  </h4>
+                  {(() => {
+                    const userOrders = orders.filter(
+                      (o) =>
+                        o.userId === selectedUserForModal.uid ||
+                        o.customerEmail.toLowerCase() === selectedUserForModal.email.toLowerCase()
+                    );
+
+                    if (userOrders.length === 0) {
+                      return (
+                        <p className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-400 italic">
+                          No orders placed yet by this customer.
+                        </p>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2.5">
+                        {userOrders.map((ord) => (
+                          <div key={ord.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-mono font-bold text-slate-900">{ord.orderNumber}</span>
+                              <span className="font-mono font-black text-emerald-700">
+                                {formatCurrency(ord.totalAmount)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] text-slate-500">
+                              <span>{formatDate(ord.createdAt)}</span>
+                              <span className="capitalize font-bold text-sky-700">{ord.orderStatus}</span>
+                            </div>
+                            <div className="text-[11px] text-slate-600 pt-1 border-t border-slate-200">
+                              Items: {ord.items.map(i => `${i.quantity}x ${i.title}`).join(', ')}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
+                <button
+                  onClick={() => setSelectedUserForModal(null)}
+                  className="py-2 px-4 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold cursor-pointer"
+                >
+                  Close Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

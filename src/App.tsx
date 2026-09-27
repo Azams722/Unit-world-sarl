@@ -37,6 +37,8 @@ import {
   DEFAULT_BRAND_SETTINGS,
   saveUserProfile, 
   getUserProfile,
+  getAllUsersFromDb,
+  INITIAL_USERS,
   getAdminsFromDb,
   addAdminToDb,
   removeAdminFromDb,
@@ -92,6 +94,90 @@ export default function App() {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [admins, setAdmins] = useState<AdminUser[]>(DEFAULT_ADMINS);
+  const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
+
+  // URL Navigation helper to sync address bar without page reload
+  const navigateTo = (path: string) => {
+    if (typeof window !== 'undefined' && window.location.pathname !== path) {
+      window.history.pushState(null, '', path);
+    }
+  };
+
+  const openAuthModal = () => {
+    setIsAuthOpen(true);
+    navigateTo('/auth');
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthOpen(false);
+    const path = window.location.pathname.toLowerCase();
+    if (path === '/auth' || path === '/login' || path === '/signup' || path === '/register') {
+      navigateTo('/');
+    }
+  };
+
+  const openDashboardModal = () => {
+    setIsDashboardOpen(true);
+    navigateTo('/dashboard');
+  };
+
+  const closeDashboardModal = () => {
+    setIsDashboardOpen(false);
+    const path = window.location.pathname.toLowerCase();
+    if (path === '/dashboard' || path === '/account' || path === '/profile') {
+      navigateTo('/');
+    }
+  };
+
+  const openAdminModal = () => {
+    setIsAdminOpen(true);
+    navigateTo('/admin');
+  };
+
+  const closeAdminModal = () => {
+    setIsAdminOpen(false);
+    const path = window.location.pathname.toLowerCase();
+    if (path === '/admin' || path === '/portal') {
+      navigateTo('/');
+    }
+  };
+
+  const openTrackingModal = () => {
+    setIsTrackingOpen(true);
+    navigateTo('/tracking');
+  };
+
+  const closeTrackingModal = () => {
+    setIsTrackingOpen(false);
+    const path = window.location.pathname.toLowerCase();
+    if (path === '/tracking' || path === '/track' || path === '/orders') {
+      navigateTo('/');
+    }
+  };
+
+  // Sync URL Path on Initial Load and Browser Back/Forward navigation (Vercel SPA routing)
+  useEffect(() => {
+    const handleUrlRoute = () => {
+      const path = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+      if (path === '/auth' || path === '/login' || path === '/signup' || path === '/register') {
+        setIsAuthOpen(true);
+      } else if (path === '/dashboard' || path === '/account' || path === '/profile') {
+        setIsDashboardOpen(true);
+      } else if (path === '/admin' || path === '/portal') {
+        setIsAdminOpen(true);
+      } else if (path === '/tracking' || path === '/track' || path === '/orders') {
+        setIsTrackingOpen(true);
+      } else if (path === '/cart') {
+        setIsCartOpen(true);
+      } else if (path === '/checkout') {
+        setIsCheckoutOpen(true);
+      }
+    };
+
+    handleUrlRoute();
+    window.addEventListener('popstate', handleUrlRoute);
+    return () => window.removeEventListener('popstate', handleUrlRoute);
+  }, []);
 
   // Mobile Bottom Tab
   const [mobileTab, setMobileTab] = useState<'home' | 'categories' | 'shop' | 'cart' | 'account'>('home');
@@ -125,6 +211,22 @@ export default function App() {
       }
     });
 
+    // Load registered users directory
+    getAllUsersFromDb().then((loadedUsers) => {
+      if (loadedUsers && loadedUsers.length > 0) {
+        setUsers(loadedUsers);
+      }
+    });
+
+    // Global keyboard shortcut (Ctrl+Shift+A) for staff admin portal
+    const handleKeyShortcut = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        setIsAdminOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyShortcut);
+
     // Real-time listener for products
     const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       if (!snapshot.empty) {
@@ -154,6 +256,10 @@ export default function App() {
         const profile = await getUserProfile(user.uid);
         if (profile) {
           setCurrentUser(profile);
+          setUsers((prev) => {
+            const exists = prev.some((u) => u.uid === profile.uid);
+            return exists ? prev.map((u) => (u.uid === profile.uid ? profile : u)) : [profile, ...prev];
+          });
         } else {
           const newProfile: UserProfile = {
             uid: user.uid,
@@ -172,11 +278,13 @@ export default function App() {
           };
           setCurrentUser(newProfile);
           saveUserProfile(newProfile);
+          setUsers((prev) => [newProfile, ...prev.filter((u) => u.uid !== newProfile.uid)]);
         }
       }
     });
 
     return () => {
+      window.removeEventListener('keydown', handleKeyShortcut);
       unsubProducts();
       unsubOrders();
       unsubAuth();
@@ -328,10 +436,9 @@ export default function App() {
         cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)}
         onOpenCart={() => setIsCartOpen(true)}
         currentUser={currentUser}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={openAuthModal}
         onSignOut={handleSignOut}
-        onOpenDashboard={() => setIsDashboardOpen(true)}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenDashboard={openDashboardModal}
         onSelectCategory={(cat) => {
           setSelectedCategory(cat);
           setMobileTab('shop');
@@ -339,7 +446,7 @@ export default function App() {
         selectedCategory={selectedCategory}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onOpenTracking={() => setIsTrackingOpen(true)}
+        onOpenTracking={openTrackingModal}
         notifications={notifications}
       />
 
@@ -676,8 +783,8 @@ export default function App() {
         </section>
       </main>
 
-      {/* 7. Footer */}
-      <Footer logoUrl={brandSettings.logoUrl} />
+      {/* 7. Footer with discrete staff link */}
+      <Footer logoUrl={brandSettings.logoUrl} onOpenAdmin={openAdminModal} />
 
       {/* 8. Mobile Bottom Navigation */}
       <MobileBottomNav
@@ -686,8 +793,8 @@ export default function App() {
           setMobileTab(tab);
           if (tab === 'cart') setIsCartOpen(true);
           else if (tab === 'account') {
-            if (currentUser) setIsDashboardOpen(true);
-            else setIsAuthOpen(true);
+            if (currentUser) openDashboardModal();
+            else openAuthModal();
           } else if (tab === 'categories') {
             setSelectedCategory('All Departments');
           } else if (tab === 'shop') {
@@ -721,28 +828,30 @@ export default function App() {
         currentUser={currentUser}
         gatewaySettings={gatewaySettings}
         onOrderCompleted={handleOrderCompleted}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={openAuthModal}
       />
 
       <OrderTrackingModal
         isOpen={isTrackingOpen}
-        onClose={() => setIsTrackingOpen(false)}
+        onClose={closeTrackingModal}
         orders={orders}
       />
 
       <AuthModal
         isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
+        onClose={closeAuthModal}
         onAuthSuccess={(profile) => {
           setCurrentUser(profile);
           saveUserProfile(profile);
+          setUsers((prev) => [profile, ...prev.filter((u) => u.uid !== profile.uid)]);
+          closeAuthModal();
         }}
       />
 
       {currentUser && (
         <CustomerDashboard
           isOpen={isDashboardOpen}
-          onClose={() => setIsDashboardOpen(false)}
+          onClose={closeDashboardModal}
           user={currentUser}
           orders={orders}
           onUpdateProfile={(updated) => {
@@ -750,8 +859,8 @@ export default function App() {
             saveUserProfile(updated);
           }}
           onTrackOrder={(ord) => {
-            setIsDashboardOpen(false);
-            setIsTrackingOpen(true);
+            closeDashboardModal();
+            openTrackingModal();
           }}
         />
       )}
@@ -759,9 +868,10 @@ export default function App() {
       {/* Admin ERP Portal */}
       <AdminPortal
         isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
+        onClose={closeAdminModal}
         products={products}
         orders={orders}
+        users={users}
         gatewaySettings={gatewaySettings}
         brandSettings={brandSettings}
         admins={admins}
@@ -769,6 +879,10 @@ export default function App() {
         onUpdateProduct={updateProductInDb}
         onDeleteProduct={deleteProductFromDb}
         onUpdateOrderStatus={updateOrderStatusInDb}
+        onUpdateUser={async (updated) => {
+          await saveUserProfile(updated);
+          setUsers((prev) => prev.map((u) => (u.uid === updated.uid ? updated : u)));
+        }}
         onSaveGatewaySettings={async (settings) => {
           await saveGatewaySettings(settings);
           setGatewaySettings(settings);

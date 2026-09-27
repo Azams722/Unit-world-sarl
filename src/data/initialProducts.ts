@@ -11,10 +11,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Automobiles & Cars',
     condition: 'Registered',
     images: [
-      '/src/assets/images/car_landcruiser_vxr_1790462842346.jpg',
-      'https://images.unsplash.com/photo-1594502184342-2e12f877aa73?auto=format&fit=crop&w=1000&q=80',
-      'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1000&q=80',
-      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/car_landcruiser_vxr_1790462842346.jpg'
     ],
     stock: 1,
     sku: 'UW-CAR-LC2025-VXR',
@@ -49,9 +46,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Automobiles & Cars',
     condition: 'Foreign Used (Tokunbo)',
     images: [
-      '/src/assets/images/car_highlander_xse_1790462851011.jpg',
-      'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1000&q=80',
-      'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/car_highlander_xse_1790462851011.jpg'
     ],
     stock: 1,
     sku: 'UW-CAR-HL2021-XSE',
@@ -84,8 +79,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Automobiles & Cars',
     condition: 'Foreign Used (Tokunbo)',
     images: [
-      '/src/assets/images/car_highlander_xse_1790462851011.jpg',
-      'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/car_highlander_xse_1790462851011.jpg'
     ],
     stock: 1,
     sku: 'UW-CAR-HL-LIMITED',
@@ -116,9 +110,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Automobiles & Cars',
     condition: 'Registered',
     images: [
-      '/src/assets/images/car_lexus_rx350_1790462861358.jpg',
-      'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1000&q=80',
-      'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/car_lexus_rx350_1790462861358.jpg'
     ],
     stock: 1,
     sku: 'UW-CAR-RX350-2017',
@@ -153,9 +145,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Automobiles & Cars',
     condition: 'Foreign Used (Tokunbo)',
     images: [
-      '/src/assets/images/car_camry_2010_1790462872857.jpg',
-      'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1000&q=80',
-      'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/car_camry_2010_1790462872857.jpg'
     ],
     stock: 1,
     sku: 'UW-CAR-CAMRY2010-TOK',
@@ -188,8 +178,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Fashion',
     condition: 'Brand New',
     images: [
-      '/src/assets/images/olive_twopiece_set_1790463639851.jpg',
-      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/olive_twopiece_set_1790463639851.jpg'
     ],
     stock: 20,
     sku: 'UW-FASH-001',
@@ -220,8 +209,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Fashion',
     condition: 'Brand New',
     images: [
-      '/src/assets/images/patchwork_resort_set_1790463649928.jpg',
-      'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/patchwork_resort_set_1790463649928.jpg'
     ],
     stock: 22,
     sku: 'UW-FASH-002',
@@ -252,8 +240,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Fashion',
     condition: 'Brand New',
     images: [
-      '/src/assets/images/monochrome_split_set_1790463659716.jpg',
-      'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/monochrome_split_set_1790463659716.jpg'
     ],
     stock: 18,
     sku: 'UW-FASH-003',
@@ -283,8 +270,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Fashion',
     condition: 'Brand New',
     images: [
-      '/src/assets/images/fleece_shorts_khaki_1790463670407.jpg',
-      'https://images.unsplash.com/photo-1591195853828-11db59a44f6b?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/fleece_shorts_khaki_1790463670407.jpg'
     ],
     stock: 25,
     sku: 'UW-FASH-004',
@@ -313,8 +299,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Fashion',
     condition: 'Brand New',
     images: [
-      '/src/assets/images/striped_knit_set_1790463679741.jpg',
-      'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/striped_knit_set_1790463679741.jpg'
     ],
     stock: 16,
     sku: 'UW-FASH-005',
@@ -343,8 +328,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Supermarket & Raw Foods',
     condition: 'Brand New',
     images: [
-      '/src/assets/images/real_benue_yam_tubers_1790463596532.jpg',
-      'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/real_benue_yam_tubers_1790463596532.jpg'
     ],
     stock: 45,
     sku: 'UW-FOOD-YAM-B5',
@@ -374,8 +358,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Supermarket & Raw Foods',
     condition: 'Brand New',
     images: [
-      '/src/assets/images/delta_palm_oil_keg_1790463610040.jpg',
-      'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/delta_palm_oil_keg_1790463610040.jpg'
     ],
     stock: 35,
     sku: 'UW-FOOD-PALMOIL-25L',
@@ -405,8 +388,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Supermarket & Raw Foods',
     condition: 'Brand New',
     images: [
-      '/src/assets/images/royal_stallion_rice_1790463620369.jpg',
-      'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=1000&q=80'
+      '/src/assets/images/royal_stallion_rice_1790463620369.jpg'
     ],
     stock: 60,
     sku: 'UW-FOOD-RICE-50KG',
@@ -436,9 +418,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Phones & Tablets',
     condition: 'Brand New',
     images: [
-      'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=800&q=80'
+      'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80'
     ],
     stock: 8,
     sku: 'UW-PHONE-IP16PM-256',
@@ -469,8 +449,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Electronics',
     condition: 'Brand New',
     images: [
-      'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1577979749830-f1d742b96791?auto=format&fit=crop&w=800&q=80'
+      'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80'
     ],
     stock: 12,
     sku: 'UW-ELEC-SONY65',

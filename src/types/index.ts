@@ -112,6 +112,8 @@ export interface UserProfile {
     smsNotifications: boolean;
     whatsappAlerts: boolean;
   };
+  status?: 'active' | 'suspended';
+  lastLoginAt?: string;
   createdAt: string;
 }
 
