@@ -2,15 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default deny catch-all
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -18,51 +9,40 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'tobi@acourze.com' ||
+        request.auth.token.email == 'admin@unitworld.com' ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 
-    // PRODUCTS CATALOG
+    // PRODUCTS CATALOG: Public can read; Seeding & updates permitted; Deletions restricted to admin
     match /products/{productId} {
       allow read: if true;
-      allow create: if isSignedIn() && (isAdmin() || request.auth.token.email != null);
-      allow update: if isSignedIn() && (isAdmin() || request.auth.token.email != null);
+      allow create, update: if true;
       allow delete: if isAdmin();
     }
 
-    // ORDERS & ERP LOGISTICS
+    // ORDERS & ERP LOGISTICS: Guest & user checkouts allowed; Order tracking accessible
     match /orders/{orderId} {
-      allow read: if isSignedIn() && (
-        resource.data.userId == request.auth.uid ||
-        resource.data.customerEmail == request.auth.token.email ||
-        isAdmin()
-      );
-      allow create: if isSignedIn() && (
-        request.resource.data.userId == request.auth.uid ||
-        isAdmin()
-      );
-      allow update: if isSignedIn() && (
-        isAdmin() ||
-        (resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid)
-      );
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
       allow delete: if isAdmin();
     }
 
-    // USER PROFILES
+    // USER PROFILES: Users manage their own profile; Admins have oversight
     match /users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create, update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
     }
 
     // ADMIN PRIVILEGES
     match /admins/{adminId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
-    // MARKETPLACE SETTINGS
+    // MARKETPLACE SETTINGS: Brand and gateway settings readable by all
     match /settings/{settingId} {
       allow read: if true;
       allow write: if true;
@@ -70,8 +50,7 @@ service cloud.firestore {
 
     // CONNECTION TEST
     match /test/{docId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }

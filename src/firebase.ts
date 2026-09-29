@@ -116,7 +116,20 @@ export async function syncAllProductsToDb(overwriteExisting = true): Promise<Pro
     const batch = writeBatch(db);
     for (const prod of INITIAL_PRODUCTS) {
       const ref = doc(db, 'products', prod.id);
-      batch.set(ref, prod, { merge: !overwriteExisting });
+      let toSave = { ...prod };
+      try {
+        const existingDoc = await getDoc(ref);
+        if (existingDoc.exists()) {
+          const exData = existingDoc.data() as Product;
+          if (exData.images && exData.images.length > 0) {
+            toSave.images = exData.images;
+          }
+          if (exData.videos && exData.videos.length > 0) {
+            toSave.videos = exData.videos;
+          }
+        }
+      } catch {}
+      batch.set(ref, toSave);
     }
     await batch.commit();
 
@@ -150,29 +163,52 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
   try {
     const productsSnapshot = await getDocs(collection(db, path));
     
-    // Check if yams or clothes in DB still have old images (e.g. unsplash carrots)
+    // Check if hair products or updated products exist in Firestore
     let needsUpdate = false;
     if (productsSnapshot.empty) {
       needsUpdate = true;
     } else {
+      const existingIds = new Set<string>();
       productsSnapshot.forEach((d) => {
         const data = d.data() as Product;
+        existingIds.add(data.id);
         if (data.id === 'prod-rawfood-yam-bundle' && data.images?.[0]?.includes('unsplash')) {
           needsUpdate = true;
         }
         if (data.category === 'Fashion' && data.images?.[0]?.includes('unsplash')) {
           needsUpdate = true;
         }
+        if (
+          (data.seller && data.seller.includes('Acourze')) ||
+          (data.title && data.title.includes('Acourze')) ||
+          (data.description && data.description.includes('Acourze'))
+        ) {
+          needsUpdate = true;
+        }
       });
+
+      // If new hair products are missing from DB, trigger sync
+      if (!existingIds.has('prod-hair-luxury-5x5-bounce') || !existingIds.has('prod-hair-sdd-celebrity-fringe')) {
+        needsUpdate = true;
+      }
     }
 
     if (needsUpdate) {
-      console.log('Updating catalog in Firestore with authentic verified images & products...');
+      console.log('Updating catalog in Firestore with authentic verified images and clean hair product details...');
       return await syncAllProductsToDb(true);
     }
 
     const loaded: Product[] = [];
     productsSnapshot.forEach((d) => loaded.push(d.data() as Product));
+
+    // Ensure all INITIAL_PRODUCTS are included even if not yet saved
+    const loadedIds = new Set(loaded.map(p => p.id));
+    for (const initProd of INITIAL_PRODUCTS) {
+      if (!loadedIds.has(initProd.id)) {
+        loaded.push(initProd);
+      }
+    }
+
     return loaded;
   } catch (err) {
     console.warn('Database seeding notice (using in-memory fallback if guest):', err);
@@ -216,7 +252,7 @@ export const DEFAULT_ADMINS: AdminUser[] = [
   {
     id: 'admin-super-1',
     email: 'tobi@acourze.com',
-    name: 'Tobi Acourze',
+    name: 'Tobi (Executive Admin)',
     role: 'super_admin',
     department: 'Executive Operations',
     addedAt: '2025-01-01T00:00:00.000Z',
@@ -398,7 +434,7 @@ export const INITIAL_USERS: UserProfile[] = [
   {
     uid: 'user-tobi-admin',
     email: 'tobi@acourze.com',
-    displayName: 'Tobi Acourze',
+    displayName: 'Tobi',
     phone: '+234 800 8648 967',
     role: 'admin',
     mfaEnabled: true,
@@ -406,7 +442,7 @@ export const INITIAL_USERS: UserProfile[] = [
     addresses: [
       {
         id: 'addr-1',
-        fullName: 'Tobi Acourze',
+        fullName: 'Tobi',
         phone: '+234 800 8648 967',
         street: '14B Admiralty Way, Lekki Phase 1',
         city: 'Lagos',

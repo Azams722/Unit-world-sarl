@@ -7,6 +7,8 @@ export interface Product {
   category: string;
   condition?: 'Brand New' | 'Foreign Used (Tokunbo)' | 'Registered' | 'Refurbished' | string;
   images: string[];
+  videos?: string[];
+  slug?: string;
   stock?: number;
   sku?: string;
   seller?: string;

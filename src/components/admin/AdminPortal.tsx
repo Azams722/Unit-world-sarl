@@ -61,6 +61,10 @@ const PRESET_IMAGE_ASSETS = [
   { label: 'Striped Knit Polo & Shorts', url: '/src/assets/images/striped_knit_set_1790463679741.jpg' },
   { label: 'iPhone 16 Pro Max Desert', url: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80' },
   { label: 'Sony Bravia 4K 65-Inch TV', url: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Luxury 5x5 Bounce Human Hair', url: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'SDD Celebrity Fringe Human Hair', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Jerry Curl 4x4 Natural Color', url: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=1000&q=80' },
+  { label: 'Pixie Curl Water Friendly', url: 'https://images.unsplash.com/photo-1584297091622-af8e5bd80b13?auto=format&fit=crop&w=1000&q=80' },
 ];
 
 interface AdminPortalProps {
@@ -1388,10 +1392,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
                         <label className="py-2 px-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
                           <Upload className="w-3.5 h-3.5 text-sky-400" />
-                          <span>Upload From Device</span>
+                          <span>Upload Photos / Video</span>
                           <input
                             type="file"
-                            accept="image/*"
+                            accept="image/*,video/*"
                             multiple
                             className="hidden"
                             onChange={handleImageFileUpload}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Car, 
   Shirt, 
@@ -52,13 +52,15 @@ import { MobileBottomNav } from './components/common/MobileBottomNav';
 import { NotificationToast } from './components/common/NotificationToast';
 import { ProductCard } from './components/shop/ProductCard';
 import { ProductDetailModal } from './components/shop/ProductDetailModal';
+import { ProductPage } from './components/shop/ProductPage';
 import { CartDrawer } from './components/shop/CartDrawer';
 import { CheckoutModal } from './components/checkout/CheckoutModal';
 import { OrderTrackingModal } from './components/orders/OrderTrackingModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { CustomerDashboard } from './components/customer/CustomerDashboard';
 import { AdminPortal } from './components/admin/AdminPortal';
-import { formatCurrency } from './utils/formatters';
+import { MediaUploaderModal } from './components/admin/MediaUploaderModal';
+import { formatCurrency, generateProductSlug } from './utils/formatters';
 import { CATEGORIES, INITIAL_PRODUCTS } from './data/initialProducts';
 
 export default function App() {
@@ -66,6 +68,8 @@ export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isMediaUploaderOpen, setIsMediaUploaderOpen] = useState(false);
+  const [mediaUploaderInitialProduct, setMediaUploaderInitialProduct] = useState<string | undefined>(undefined);
   const [gatewaySettings, setGatewaySettings] = useState<GatewaySettings>({
     paystackPublicKey: 'pk_test_d347895e69123847291a890472e819b5d2',
     paystackEnabled: true,
@@ -87,6 +91,7 @@ export default function App() {
 
   // Modals & Navigation
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productPageProduct, setProductPageProduct] = useState<Product | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
@@ -101,6 +106,20 @@ export default function App() {
     if (typeof window !== 'undefined' && window.location.pathname !== path) {
       window.history.pushState(null, '', path);
     }
+  };
+
+  const handleSelectProduct = (product: Product) => {
+    const slug = generateProductSlug(product);
+    setProductPageProduct(product);
+    setSelectedProduct(null);
+    navigateTo(`/product/${slug}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackFromProductPage = () => {
+    setProductPageProduct(null);
+    navigateTo('/');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const openAuthModal = () => {
@@ -155,10 +174,35 @@ export default function App() {
     }
   };
 
+  const productsRef = useRef<Product[]>(products);
+  useEffect(() => {
+    productsRef.current = products;
+  }, [products]);
+
   // Sync URL Path on Initial Load and Browser Back/Forward navigation (Vercel SPA routing)
   useEffect(() => {
     const handleUrlRoute = () => {
       const path = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+      if (path.startsWith('/product/') || path.startsWith('/item/')) {
+        const slug = path.replace(/^\/(product|item)\//, '').trim();
+        const curProducts = productsRef.current;
+        if (slug && curProducts.length > 0) {
+          const match = curProducts.find(
+            (p) =>
+              (p.slug && p.slug.toLowerCase() === slug) ||
+              generateProductSlug(p).toLowerCase() === slug ||
+              p.id.toLowerCase() === slug
+          );
+          if (match) {
+            setProductPageProduct(match);
+            setSelectedProduct(null);
+            return;
+          }
+        }
+      } else {
+        setProductPageProduct(null);
+      }
+
       if (path === '/auth' || path === '/login' || path === '/signup' || path === '/register') {
         setIsAuthOpen(true);
       } else if (path === '/dashboard' || path === '/account' || path === '/profile') {
@@ -178,6 +222,23 @@ export default function App() {
     window.addEventListener('popstate', handleUrlRoute);
     return () => window.removeEventListener('popstate', handleUrlRoute);
   }, []);
+
+  // Hydrate productPageProduct when products are loaded from database
+  useEffect(() => {
+    const path = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+    if ((path.startsWith('/product/') || path.startsWith('/item/')) && products.length > 0) {
+      const slug = path.replace(/^\/(product|item)\//, '').trim();
+      const match = products.find(
+        (p) =>
+          (p.slug && p.slug.toLowerCase() === slug) ||
+          generateProductSlug(p).toLowerCase() === slug ||
+          p.id.toLowerCase() === slug
+      );
+      if (match) {
+        setProductPageProduct(match);
+      }
+    }
+  }, [products]);
 
   // Mobile Bottom Tab
   const [mobileTab, setMobileTab] = useState<'home' | 'categories' | 'shop' | 'cart' | 'account'>('home');
@@ -393,7 +454,9 @@ export default function App() {
   const filteredProducts = products.filter((p) => {
     const matchesCategory =
       selectedCategory === 'All Departments' ||
-      p.category.toLowerCase() === selectedCategory.toLowerCase();
+      p.category.toLowerCase() === selectedCategory.toLowerCase() ||
+      (selectedCategory === 'Hair & Luxury Wigs' && (p.category === 'Hair & Luxury Wigs' || (p.tags && p.tags.includes('Human Hair Wig')))) ||
+      (selectedCategory === 'Health & Beauty' && (p.category === 'Hair & Luxury Wigs' || p.category === 'Health & Beauty'));
 
     const matchesSearch =
       !searchQuery.trim() ||
@@ -424,6 +487,7 @@ export default function App() {
 
   // Category subsets for curated homepage sections
   const carProducts = products.filter((p) => p.category === 'Automobiles & Cars');
+  const hairProducts = products.filter((p) => p.category === 'Hair & Luxury Wigs' || (p.tags && p.tags.includes('Human Hair Wig')));
   const fashionProducts = products.filter((p) => p.category === 'Fashion');
   const groceryProducts = products.filter((p) => p.category === 'Supermarket & Raw Foods');
   const techProducts = products.filter((p) => p.category === 'Phones & Tablets' || p.category === 'Electronics');
@@ -440,18 +504,42 @@ export default function App() {
         onSignOut={handleSignOut}
         onOpenDashboard={openDashboardModal}
         onSelectCategory={(cat) => {
+          setProductPageProduct(null);
           setSelectedCategory(cat);
           setMobileTab('shop');
         }}
         selectedCategory={selectedCategory}
         searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={(q) => {
+          if (productPageProduct) setProductPageProduct(null);
+          setSearchQuery(q);
+        }}
         onOpenTracking={openTrackingModal}
         notifications={notifications}
+        onGoHome={handleBackFromProductPage}
+        onOpenMediaUploader={() => {
+          setMediaUploaderInitialProduct(undefined);
+          setIsMediaUploaderOpen(true);
+        }}
       />
 
-      {/* 2. Main Content Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6 sm:space-y-8">
+      {/* 2. Main Content Body or Dedicated Product Page */}
+      {productPageProduct ? (
+        <ProductPage
+          product={productPageProduct}
+          allProducts={products}
+          onBack={handleBackFromProductPage}
+          onSelectProduct={handleSelectProduct}
+          onAddToCart={handleAddToCart}
+          onInstantBuy={handleInstantBuy}
+          onUpdateProduct={async (updated) => {
+            setProductPageProduct(updated);
+            await updateProductInDb(updated.id, updated);
+            setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+          }}
+        />
+      ) : (
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6 sm:space-y-8">
         {/* HERO SHOWCASE / JUMIA CAMPAIGN BANNER (Only on Homepage & All Departments) */}
         {selectedCategory === 'All Departments' && !searchQuery && (
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -504,6 +592,13 @@ export default function App() {
                     <span>View Motors Showroom</span>
                   </button>
                   <button
+                    onClick={() => setSelectedCategory('Hair & Luxury Wigs')}
+                    className="py-2.5 px-4 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Luxury Wigs & Hair</span>
+                  </button>
+                  <button
                     onClick={() => setSelectedCategory('Fashion')}
                     className="py-2.5 px-4 bg-white/90 hover:bg-white text-slate-900 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
@@ -520,7 +615,7 @@ export default function App() {
               <div 
                 onClick={() => {
                   const lc = products.find(p => p.sku === 'UW-CAR-LC2025-VXR');
-                  if (lc) setSelectedProduct(lc);
+                  if (lc) handleSelectProduct(lc);
                 }}
                 className="flex-1 bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs hover:border-sky-300 transition-all cursor-pointer flex flex-col justify-between"
               >
@@ -601,7 +696,7 @@ export default function App() {
                 <ProductCard
                   key={car.id}
                   product={car}
-                  onSelect={setSelectedProduct}
+                  onSelect={handleSelectProduct}
                   onAddToCart={handleAddToCart}
                   onDirectDm={handleDirectDm}
                 />
@@ -610,7 +705,55 @@ export default function App() {
           </section>
         )}
 
-        {/* 4. SHOWCASE SECTION 2: FASHION HUB - FLAT ₦25,000 */}
+        {/* 4. SHOWCASE SECTION: LUXURY HUMAN HAIR & WIGS */}
+        {(selectedCategory === 'All Departments' || selectedCategory === 'Hair & Luxury Wigs' || selectedCategory === 'Health & Beauty') && !searchQuery && (
+          <section className="bg-white rounded-2xl border border-rose-100 p-4 sm:p-6 shadow-2xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-rose-100/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-500 text-white flex items-center justify-center shadow-xs">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-playfair text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                      Luxury Human Hair & Wigs Collection
+                    </h2>
+                    <span className="bg-rose-100 text-rose-800 text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider">
+                      100% Virgin Hair
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    100% Virgin double drawn human hair: Luxury 5x5 Bounce (₦60,000), SDD Celebrity Fringe (₦61,000), Jerry Curl 4x4 (₦27,000), Pixie Curl (₦20,000). Video demos & multi-angle galleries available.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSelectedCategory('Hair & Luxury Wigs')}
+                  className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Explore Wigs Catalog ({hairProducts.length})</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+              {hairProducts.map((hair) => (
+                <ProductCard
+                  key={hair.id}
+                  product={hair}
+                  onSelect={handleSelectProduct}
+                  onAddToCart={handleAddToCart}
+                  onDirectDm={handleDirectDm}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 5. SHOWCASE SECTION 3: FASHION HUB - FLAT ₦25,000 */}
         {(selectedCategory === 'All Departments' || selectedCategory === 'Fashion') && !searchQuery && (
           <section className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-2xs space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
@@ -645,7 +788,7 @@ export default function App() {
                 <ProductCard
                   key={item.id}
                   product={item}
-                  onSelect={setSelectedProduct}
+                  onSelect={handleSelectProduct}
                   onAddToCart={handleAddToCart}
                   onDirectDm={handleDirectDm}
                 />
@@ -686,7 +829,7 @@ export default function App() {
                 <ProductCard
                   key={gro.id}
                   product={gro}
-                  onSelect={setSelectedProduct}
+                  onSelect={handleSelectProduct}
                   onAddToCart={handleAddToCart}
                   onDirectDm={handleDirectDm}
                 />
@@ -773,7 +916,7 @@ export default function App() {
                 <ProductCard
                   key={prod.id}
                   product={prod}
-                  onSelect={setSelectedProduct}
+                  onSelect={handleSelectProduct}
                   onAddToCart={handleAddToCart}
                   onDirectDm={handleDirectDm}
                 />
@@ -782,6 +925,7 @@ export default function App() {
           )}
         </section>
       </main>
+      )}
 
       {/* 7. Footer with discrete staff link */}
       <Footer logoUrl={brandSettings.logoUrl} onOpenAdmin={openAdminModal} />
@@ -810,6 +954,12 @@ export default function App() {
         onClose={() => setSelectedProduct(null)}
         onAddToCart={handleAddToCart}
         onInstantBuy={handleInstantBuy}
+        onOpenProductPage={handleSelectProduct}
+        onUpdateProduct={async (updated) => {
+          setSelectedProduct(updated);
+          await updateProductInDb(updated.id, updated);
+          setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        }}
       />
 
       <CartDrawer
@@ -946,6 +1096,21 @@ export default function App() {
               createdAt: new Date().toISOString(),
             };
             setCurrentUser(demoAdmin);
+          }
+        }}
+      />
+
+      {/* Media Uploader Modal for batch uploading WhatsApp media */}
+      <MediaUploaderModal
+        isOpen={isMediaUploaderOpen}
+        onClose={() => setIsMediaUploaderOpen(false)}
+        products={products}
+        initialProductId={mediaUploaderInitialProduct}
+        onUpdateProduct={async (updated) => {
+          await updateProductInDb(updated.id, updated);
+          setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+          if (productPageProduct && productPageProduct.id === updated.id) {
+            setProductPageProduct(updated);
           }
         }}
       />

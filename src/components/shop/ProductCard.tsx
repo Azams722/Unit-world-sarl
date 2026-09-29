@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Eye, Star, MessageSquareQuote, CheckCircle2, ShieldCheck, MapPin, ChevronLeft, ChevronRight, Images } from 'lucide-react';
+import { ShoppingCart, Eye, Star, MessageSquareQuote, CheckCircle2, ShieldCheck, MapPin, ChevronLeft, ChevronRight, Images, Play, Sparkles } from 'lucide-react';
 import { Product } from '../../types';
-import { formatCurrency, formatShortPrice } from '../../utils/formatters';
+import { formatCurrency, formatShortPrice, generateProductSlug } from '../../utils/formatters';
+import { MediaViewer } from '../common/MediaViewer';
 
 interface ProductCardProps {
   product: Product;
@@ -25,9 +26,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const omittedSet = new Set(product.omittedFields || []);
   const isFieldOmitted = (field: string) => omittedSet.has(field);
 
+  const hasUploadedMedia = (product.images && product.images.length > 0) || (product.videos && product.videos.length > 0);
   const imagesList = product.images && product.images.length > 0
     ? product.images
-    : ['/src/assets/images/hero_marketplace_jumia_1790462828695.jpg'];
+    : [];
 
   const hasGallery = imagesList.length > 1;
 
@@ -46,24 +48,37 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* Product Image Slot & Gallery Slider */}
       <div 
         onClick={() => onSelect(product)}
-        className="relative w-full aspect-[4/3] bg-slate-100 overflow-hidden cursor-pointer"
+        className="relative w-full aspect-[4/3] bg-slate-900 overflow-hidden cursor-pointer"
       >
-        <img
-          src={imagesList[activeImageIdx] || imagesList[0]}
-          alt={product.title}
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80';
-          }}
-        />
+        {imagesList.length > 0 ? (
+          <MediaViewer
+            url={imagesList[activeImageIdx] || imagesList[0]}
+            alt={product.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-slate-900 via-rose-950 to-slate-900 flex flex-col items-center justify-center p-4 text-center text-white">
+            <span className="p-2.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 mb-2">
+              <Sparkles className="w-6 h-6" />
+            </span>
+            <span className="text-xs font-black text-white tracking-wide uppercase line-clamp-1 px-2">{product.title}</span>
+            <span className="text-[10px] text-rose-200/80 mt-0.5">Click to view & upload exact media</span>
+          </div>
+        )}
 
         {/* Gallery Badge (if multiple photos exist) */}
         {hasGallery && (
           <div className="absolute top-2.5 right-2.5 z-10 bg-slate-950/80 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1 border border-white/20">
             <Images className="w-3 h-3 text-sky-400" />
             <span>{activeImageIdx + 1}/{imagesList.length}</span>
+          </div>
+        )}
+
+        {/* Video Demo Badge */}
+        {product.videos && product.videos.length > 0 && (
+          <div className="absolute top-2.5 left-2.5 z-10 bg-red-600/95 backdrop-blur-xs text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1">
+            <Play className="w-2.5 h-2.5 fill-current" />
+            <span>Video Demo</span>
           </div>
         )}
 
@@ -150,12 +165,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             ) : null}
           </div>
 
-          {/* Title */}
-          <h3 
-            onClick={() => onSelect(product)}
-            className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-2 hover:text-[#0284C7] cursor-pointer transition-colors leading-snug"
-          >
-            {product.title}
+          {/* Title with SEO friendly slug link */}
+          <h3 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-2 leading-snug">
+            <a 
+              href={`/product/${generateProductSlug(product)}`}
+              onClick={(e) => {
+                e.preventDefault();
+                onSelect(product);
+              }}
+              className="hover:text-[#0284C7] cursor-pointer transition-colors"
+            >
+              {product.title}
+            </a>
           </h3>
 
           {/* Specs Snippet / Key Highlights (Only if NOT omitted) */}

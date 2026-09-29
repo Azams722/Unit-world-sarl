@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   ShoppingCart, 
@@ -9,21 +9,30 @@ import {
   MessageSquareQuote, 
   Car, 
   FileText, 
-  Share2,
-  ChevronLeft,
-  ChevronRight,
-  Maximize2,
-  Images,
-  Award
+  Share2, 
+  ChevronLeft, 
+  ChevronRight, 
+  Maximize2, 
+  Images, 
+  Award, 
+  Play, 
+  Upload, 
+  Video, 
+  Plus,
+  ExternalLink
 } from 'lucide-react';
 import { Product } from '../../types';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, generateProductSlug } from '../../utils/formatters';
+import { processMediaFile } from '../../utils/mediaStorage';
+import { MediaViewer } from '../common/MediaViewer';
 
 interface ProductDetailModalProps {
   product: Product | null;
   onClose: () => void;
   onAddToCart: (product: Product, quantity?: number) => void;
   onInstantBuy: (product: Product) => void;
+  onUpdateProduct?: (product: Product) => void;
+  onOpenProductPage?: (product: Product) => void;
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
@@ -31,28 +40,66 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onClose,
   onAddToCart,
   onInstantBuy,
+  onUpdateProduct,
+  onOpenProductPage,
 }) => {
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [extraMedia, setExtraMedia] = useState<{ url: string; isVideo: boolean }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const isVideoUrl = (url: string) => {
+    if (!url) return false;
+    return (
+      url.endsWith('.mp4') ||
+      url.endsWith('.webm') ||
+      url.endsWith('.mov') ||
+      url.includes('gtv-videos-bucket') ||
+      url.startsWith('data:video/') ||
+      url.includes('youtube.com') ||
+      url.includes('youtu.be')
+    );
+  };
 
   // Reset index when product changes
   useEffect(() => {
     setSelectedImageIdx(0);
     setQuantity(1);
     setIsLightboxOpen(false);
+    setExtraMedia([]);
   }, [product?.id]);
+
+  if (!product) return null;
+
+  const rawImages = product.images || [];
+  const rawVideos = product.videos || [];
+
+  const mediaList: { url: string; isVideo: boolean }[] = [
+    ...rawImages.map((u) => ({ url: u, isVideo: isVideoUrl(u) })),
+    ...rawVideos.map((u) => ({ url: u, isVideo: true })),
+    ...extraMedia,
+  ];
+
+  if (mediaList.length === 0) {
+    mediaList.push({
+      url: '/src/assets/images/hero_marketplace_jumia_1790462828695.jpg',
+      isVideo: false,
+    });
+  }
+
+  const currentMedia = mediaList[selectedImageIdx] || mediaList[0];
+  const hasGallery = mediaList.length > 1;
 
   // Keyboard navigation for gallery
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!product) return;
-      const imagesCount = product.images?.length || 1;
+      const count = mediaList.length;
       if (e.key === 'ArrowLeft') {
-        setSelectedImageIdx((prev) => (prev > 0 ? prev - 1 : imagesCount - 1));
+        setSelectedImageIdx((prev) => (prev > 0 ? prev - 1 : count - 1));
       } else if (e.key === 'ArrowRight') {
-        setSelectedImageIdx((prev) => (prev < imagesCount - 1 ? prev + 1 : 0));
+        setSelectedImageIdx((prev) => (prev < count - 1 ? prev + 1 : 0));
       } else if (e.key === 'Escape') {
         if (isLightboxOpen) {
           setIsLightboxOpen(false);
@@ -64,15 +111,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [product, isLightboxOpen, onClose]);
+  }, [mediaList.length, isLightboxOpen, onClose]);
 
-  if (!product) return null;
-
-  const imagesList = product.images && product.images.length > 0
-    ? product.images
-    : ['/src/assets/images/hero_marketplace_jumia_1790462828695.jpg'];
-
-  const hasGallery = imagesList.length > 1;
   const isAutomobile = product.category === 'Automobiles & Cars';
   const isOutOfStock = product.stock !== undefined && product.stock <= 0;
 
@@ -94,12 +134,45 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const handlePrevImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setSelectedImageIdx((prev) => (prev > 0 ? prev - 1 : imagesList.length - 1));
+    setSelectedImageIdx((prev) => (prev > 0 ? prev - 1 : mediaList.length - 1));
   };
 
   const handleNextImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setSelectedImageIdx((prev) => (prev < imagesList.length - 1 ? prev + 1 : 0));
+    setSelectedImageIdx((prev) => (prev < mediaList.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !product) return;
+
+    try {
+      const newImages = [...(product.images || [])];
+      const newVideos = [...(product.videos || [])];
+
+      for (const file of Array.from(files)) {
+        const item = await processMediaFile(file);
+        if (item.isVideo) {
+          if (!newVideos.includes(item.url)) newVideos.unshift(item.url);
+        } else {
+          if (!newImages.includes(item.url)) newImages.unshift(item.url);
+        }
+      }
+
+      if (onUpdateProduct) {
+        const updatedProduct: Product = {
+          ...product,
+          images: newImages,
+          videos: newVideos,
+          updatedAt: new Date().toISOString()
+        };
+        await onUpdateProduct(updatedProduct);
+      }
+    } catch (err) {
+      console.error('Failed to process upload in modal:', err);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -121,6 +194,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
+              <a
+                href={`/product/${generateProductSlug(product)}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onClose();
+                  if (onOpenProductPage) onOpenProductPage(product);
+                }}
+                className="py-1 px-2.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                title="Open full dedicated SEO page with custom URL slug"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">SEO Page</span>
+              </a>
               <button
                 onClick={handleShare}
                 className="p-1.5 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-200/60 transition-colors text-xs flex items-center gap-1 cursor-pointer"
@@ -144,13 +230,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
               {/* Product Gallery Column */}
               <div>
-                <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner group">
-                  <img
-                    src={imagesList[selectedImageIdx] || imagesList[0]}
+                <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-900 border border-slate-200 shadow-inner group">
+                  <MediaViewer
+                    url={currentMedia.url}
+                    isVideo={currentMedia.isVideo}
                     alt={product.title}
-                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover cursor-zoom-in"
-                    onClick={() => setIsLightboxOpen(true)}
+                    onClick={() => !currentMedia.isVideo && setIsLightboxOpen(true)}
                   />
 
                   {/* Left / Right Nav Arrows on Gallery */}
@@ -192,23 +278,23 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     {hasGallery && (
                       <span className="bg-black/70 backdrop-blur-xs text-white text-[11px] font-semibold px-2 py-1 rounded-md flex items-center gap-1 border border-white/20">
                         <Images className="w-3.5 h-3.5 text-sky-400" />
-                        {selectedImageIdx + 1} / {imagesList.length}
+                        {selectedImageIdx + 1} / {mediaList.length}
                       </span>
                     )}
                     <button
                       onClick={() => setIsLightboxOpen(true)}
                       className="p-1.5 rounded-md bg-black/70 hover:bg-black/90 text-white transition-colors cursor-pointer border border-white/20"
-                      title="View Fullscreen Photo"
+                      title="View Fullscreen"
                     >
                       <Maximize2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Thumbnails Strip (if multiple photos exist in gallery) */}
-                {hasGallery && (
-                  <div className="flex gap-2 mt-3 overflow-x-auto pb-1.5 scrollbar-thin">
-                    {imagesList.map((img, idx) => (
+                {/* Thumbnails Strip & Exact Video/Picture Upload */}
+                <div className="mt-3 space-y-2">
+                  <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin items-center">
+                    {mediaList.map((item, idx) => (
                       <button
                         key={idx}
                         onClick={() => setSelectedImageIdx(idx)}
@@ -218,14 +304,54 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                             : 'border-slate-200 opacity-60 hover:opacity-100'
                         }`}
                       >
-                        <img src={img} alt={`Gallery thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                        {item.isVideo ? (
+                          <div className="w-full h-full bg-slate-950 flex flex-col items-center justify-center text-white relative">
+                            <Play className="w-5 h-5 text-sky-400 fill-sky-400 mb-0.5" />
+                            <span className="text-[8px] font-black tracking-wider text-sky-300 uppercase">Video</span>
+                          </div>
+                        ) : (
+                          <MediaViewer url={item.url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                        )}
                         <span className="absolute bottom-0.5 right-0.5 bg-black/75 text-white text-[9px] px-1 rounded font-bold">
                           {idx + 1}
                         </span>
                       </button>
                     ))}
+
+                    {/* Add Photo/Video Button */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-16 h-16 rounded-lg border-2 border-dashed border-sky-400 hover:border-sky-600 bg-sky-50/70 hover:bg-sky-100 text-sky-700 flex flex-col items-center justify-center shrink-0 cursor-pointer transition-colors p-1"
+                      title="Upload exact video or pictures from your device"
+                    >
+                      <Upload className="w-4 h-4 mb-0.5 text-sky-600" />
+                      <span className="text-[8px] font-extrabold text-center leading-tight">Add Video / Photo</span>
+                    </button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      accept="image/*,video/*"
+                      multiple
+                      className="hidden"
+                    />
                   </div>
-                )}
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                    <span className="flex items-center gap-1 font-medium">
+                      <Video className="w-3.5 h-3.5 text-sky-600" />
+                      Authentic product media gallery (photos & videos)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-[#0284C7] hover:underline font-bold text-[11px] cursor-pointer"
+                    >
+                      + Upload Local Files
+                    </button>
+                  </div>
+                </div>
 
                 {/* Verified Inspection Guarantee */}
                 <div className="mt-4 p-3.5 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2">
@@ -418,7 +544,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         </div>
       </div>
 
-      {/* Fullscreen Photo Lightbox Modal */}
+      {/* Fullscreen Photo & Video Lightbox Modal */}
       {isLightboxOpen && (
         <div 
           className="fixed inset-0 z-60 bg-black/95 flex flex-col items-center justify-between p-4 animate-in fade-in duration-200 select-none"
@@ -427,9 +553,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           {/* Lightbox Header */}
           <div className="w-full max-w-5xl flex items-center justify-between text-white py-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-bold text-sky-400">Unitworld Photo Gallery</span>
+              <span className="text-sm font-bold text-sky-400">Unitworld Media Gallery</span>
               <span className="text-xs text-slate-400 font-mono">
-                {selectedImageIdx + 1} of {imagesList.length}
+                {selectedImageIdx + 1} of {mediaList.length}
               </span>
             </div>
             <button
@@ -441,28 +567,41 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </button>
           </div>
 
-          {/* Lightbox Main Image & Arrows */}
+          {/* Lightbox Main Media (Image or Video) & Arrows */}
           <div className="relative w-full max-w-5xl flex-1 flex items-center justify-center py-4" onClick={(e) => e.stopPropagation()}>
             {hasGallery && (
               <button
                 onClick={handlePrevImage}
-                aria-label="Previous image"
+                aria-label="Previous media"
                 className="absolute left-2 sm:left-4 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white transition-all hover:scale-110 cursor-pointer z-20 border border-white/20"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
             )}
 
-            <img
-              src={imagesList[selectedImageIdx]}
-              alt={product.title}
-              className="max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl"
-            />
+            {currentMedia.isVideo ? (
+              <div className="max-h-[75vh] max-w-full flex items-center justify-center">
+                <video
+                  key={currentMedia.url}
+                  src={currentMedia.url}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-h-[75vh] max-w-full rounded-lg shadow-2xl"
+                />
+              </div>
+            ) : (
+              <img
+                src={currentMedia.url}
+                alt={product.title}
+                className="max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl"
+              />
+            )}
 
             {hasGallery && (
               <button
                 onClick={handleNextImage}
-                aria-label="Next image"
+                aria-label="Next media"
                 className="absolute right-2 sm:right-4 p-3 rounded-full bg-black/60 hover:bg-black/90 text-white transition-all hover:scale-110 cursor-pointer z-20 border border-white/20"
               >
                 <ChevronRight className="w-6 h-6" />
@@ -473,15 +612,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           {/* Lightbox Thumbnails Strip */}
           {hasGallery && (
             <div className="w-full max-w-2xl flex justify-center gap-2 overflow-x-auto py-2" onClick={(e) => e.stopPropagation()}>
-              {imagesList.map((img, idx) => (
+              {mediaList.map((item, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIdx(idx)}
-                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer relative ${
                     selectedImageIdx === idx ? 'border-sky-400 scale-105' : 'border-white/20 opacity-50 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt="thumbnail" className="w-full h-full object-cover" />
+                  {item.isVideo ? (
+                    <div className="w-full h-full bg-slate-900 flex items-center justify-center text-white">
+                      <Play className="w-4 h-4 text-sky-400 fill-sky-400" />
+                    </div>
+                  ) : (
+                    <img src={item.url} alt="thumbnail" className="w-full h-full object-cover" />
+                  )}
                 </button>
               ))}
             </div>

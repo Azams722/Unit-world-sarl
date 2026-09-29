@@ -467,12 +467,166 @@ export const INITIAL_PRODUCTS: Product[] = [
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+  },
+
+  // 14. LUXURY HAIR 1 - Luxury 5x5 Bounce
+  {
+    id: 'prod-hair-luxury-5x5-bounce',
+    slug: 'luxury-5x5-bounce',
+    title: 'Luxury 5x5 Bounce Human Hair Wig',
+    description: 'Luxury 5x5 bounce human hair wig. 100% Virgin double drawn human hair with high-bounce curl memory, pre-plucked 5x5 HD transparent lace closure, and baby hairs for natural hairline transition.',
+    price: 60000,
+    originalPrice: 75000,
+    category: 'Hair & Luxury Wigs',
+    condition: 'Brand New',
+    images: [
+      'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?auto=format&fit=crop&w=1000&q=80'
+    ],
+    videos: [
+      'https://assets.mixkit.co/videos/preview/mixkit-woman-showing-off-her-curly-hair-41584-large.mp4'
+    ],
+    stock: 16,
+    sku: 'UW-HAIR-5X5-BNC',
+    seller: 'Luxury Human Hair Studio',
+    location: 'Lekki / Victoria Island, Lagos',
+    rating: 5.0,
+    reviewCount: 38,
+    featured: true,
+    tags: ['Luxury 5x5 bounce', 'Human Hair Wig', '5x5 Closure', 'Bounce Curls', '60,000 Naira', 'Hair & Luxury Wigs', 'Health & Beauty'],
+    specs: {
+      'Product Name': 'Luxury 5x5 Bounce',
+      'Closure Size': '5x5 HD Transparent Lace Closure',
+      'Hair Texture': 'Luxury Bounce Curls (Double Drawn)',
+      'Price': '60,000 Naira (₦60,000)',
+      'Hair Material': '100% Virgin Human Hair',
+      'Color': 'Natural Black / 1B',
+      'Cap Construction': 'Breathable Mesh Cap with Adjustable Straps & Security Combs'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+
+  // 15. LUXURY HAIR 2 - SDD Celebrity Fringe
+  {
+    id: 'prod-hair-sdd-celebrity-fringe',
+    slug: 'sdd-celebrity-fringe',
+    title: 'SDD Celebrity Fringe Human Hair Wig',
+    description: 'SDD (Super Double Drawn) celebrity fringe wig. Ultra-full density with razor-sharp blunt front celebrity fringe bangs, silky smooth hair cuticle alignment, and zero thin ends.',
+    price: 61000,
+    originalPrice: 78000,
+    category: 'Hair & Luxury Wigs',
+    condition: 'Brand New',
+    images: [
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=80'
+    ],
+    videos: [
+      'https://assets.mixkit.co/videos/preview/mixkit-portrait-of-a-woman-with-straight-hair-41585-large.mp4'
+    ],
+    stock: 14,
+    sku: 'UW-HAIR-SDD-FRG',
+    seller: 'Luxury Human Hair Studio',
+    location: 'Lekki / Victoria Island, Lagos',
+    rating: 4.9,
+    reviewCount: 42,
+    featured: true,
+    tags: ['Sdd celebrity fringe', 'Super Double Drawn', 'Celebrity Fringe', 'Human Hair Wig', '61,000 Naira', 'Hair & Luxury Wigs', 'Health & Beauty'],
+    specs: {
+      'Product Name': 'SDD Celebrity Fringe',
+      'Grade': 'Super Double Drawn (SDD) Thick Bottoms',
+      'Style': 'Celebrity Fringe with Face-Framing Bangs',
+      'Price': '61,000 Naira (₦61,000)',
+      'Density': '300g Super Thick Full Volume',
+      'Cap Type': 'Glueless Throw-on-and-Go Cap with Snaps',
+      'Maintenance': 'Washable, heat-safe up to 230°C'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+
+  // 16. LUXURY HAIR 3 - Jerry Curl 4x4
+  {
+    id: 'prod-hair-jerry-curl-4x4',
+    slug: 'jerry-curl-4x4',
+    title: 'Jerry Curl Wig (Closure: 4x4, Natural Color)',
+    description: 'Jerry curl wig with 4x4 closure in natural color. Juicy spiral curl pattern with high elasticity and retention. Pre-plucked lace closure enables versatile middle and side part styling.',
+    price: 27000,
+    originalPrice: 38000,
+    category: 'Hair & Luxury Wigs',
+    condition: 'Brand New',
+    images: [
+      'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1589156280159-27698a70f29e?auto=format&fit=crop&w=1000&q=80'
+    ],
+    videos: [
+      'https://assets.mixkit.co/videos/preview/mixkit-young-woman-with-curly-hair-smiling-41586-large.mp4'
+    ],
+    stock: 22,
+    sku: 'UW-HAIR-JC-4X4',
+    seller: 'Luxury Human Hair Studio',
+    location: 'Lekki / Victoria Island, Lagos',
+    rating: 4.8,
+    reviewCount: 29,
+    featured: true,
+    tags: ['Jerry Curl', 'Closure 4x4', 'Natural color', 'Human Hair Wig', '27,000 Naira', 'Hair & Luxury Wigs', 'Health & Beauty'],
+    specs: {
+      'Product Name': 'Jerry Curl',
+      'Closure Size': 'Closure: 4x4 Swiss Lace',
+      'Color': 'Natural Color',
+      'Price': '27,000 Naira (₦27,000)',
+      'Texture': 'Jerry Curl (Juicy Coily Ringlets)',
+      'Hair Care': 'Wet curl activator / water mist revival'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+
+  // 17. LUXURY HAIR 4 - Pixie Curl Water Friendly
+  {
+    id: 'prod-hair-pixie-curl-water-friendly',
+    slug: 'pixie-curl-water-friendly',
+    title: 'Pixie Curl Wig (Water Friendly - Wet & Go)',
+    description: 'Pixie curl water friendly wig. Ultra-lightweight short curly hairstyle designed for effortless daily wear. Spray with ordinary water or leave-in conditioner to instantly reactivate deep juicy coils.',
+    price: 20000,
+    originalPrice: 28000,
+    category: 'Hair & Luxury Wigs',
+    condition: 'Brand New',
+    images: [
+      'https://images.unsplash.com/photo-1584297091622-af8e5bd80b13?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=1000&q=80'
+    ],
+    videos: [
+      'https://assets.mixkit.co/videos/preview/mixkit-woman-posing-with-short-curly-hair-41587-large.mp4'
+    ],
+    stock: 30,
+    sku: 'UW-HAIR-PIXIE-WF',
+    seller: 'Luxury Human Hair Studio',
+    location: 'Lekki / Victoria Island, Lagos',
+    rating: 4.9,
+    reviewCount: 51,
+    featured: true,
+    tags: ['pixie curl', 'Water friendly', 'Wet & Go', 'Short Pixie', 'Human Hair Wig', '20,000 Naira', 'Hair & Luxury Wigs', 'Health & Beauty'],
+    specs: {
+      'Product Name': 'Pixie Curl',
+      'Special Feature': 'Water Friendly (Wet & Go)',
+      'Price': '20,000 Naira (₦20,000)',
+      'Style': 'Cropped Tapered Pixie Cut with Layered Curls',
+      'Wearability': 'Ready to wear in under 30 seconds'
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   }
 ];
 
 export const CATEGORIES = [
   { name: 'All Departments', icon: 'LayoutGrid' },
   { name: 'Automobiles & Cars', icon: 'Car' },
+  { name: 'Hair & Luxury Wigs', icon: 'Sparkles' },
   { name: 'Fashion', icon: 'Shirt' },
   { name: 'Supermarket & Raw Foods', icon: 'ShoppingBag' },
   { name: 'Phones & Tablets', icon: 'Smartphone' },

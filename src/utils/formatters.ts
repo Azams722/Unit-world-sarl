@@ -34,3 +34,15 @@ export function formatDate(isoString: string): string {
     return isoString;
   }
 }
+
+export function generateProductSlug(product: { id: string; title: string; slug?: string }): string {
+  if (product.slug && product.slug.trim()) {
+    return product.slug.toLowerCase().trim();
+  }
+  const clean = product.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return clean || product.id;
+}

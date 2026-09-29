@@ -11,7 +11,8 @@ import {
   LayoutDashboard, 
   LogOut, 
   Bell,
-  ChevronDown
+  ChevronDown,
+  Upload
 } from 'lucide-react';
 import { UnitworldLogo } from './UnitworldLogo';
 import { CATEGORIES } from '../../data/initialProducts';
@@ -31,6 +32,8 @@ interface HeaderProps {
   onOpenTracking: () => void;
   notifications: AppNotification[];
   brandLogoUrl?: string;
+  onGoHome?: () => void;
+  onOpenMediaUploader?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -47,6 +50,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTracking,
   notifications,
   brandLogoUrl,
+  onGoHome,
+  onOpenMediaUploader,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -71,6 +76,16 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-5 text-slate-300">
+            {onOpenMediaUploader && (
+              <button
+                onClick={onOpenMediaUploader}
+                className="hover:text-amber-300 text-amber-400 font-bold transition-colors cursor-pointer flex items-center gap-1.5 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30"
+                title="Upload & manage your authentic WhatsApp photos and videos"
+              >
+                <Upload className="w-3.5 h-3.5 text-amber-400" />
+                Upload My Media & Galleries
+              </button>
+            )}
             <button
               onClick={onOpenTracking}
               className="hover:text-white transition-colors cursor-pointer flex items-center gap-1"
@@ -95,7 +110,16 @@ export const Header: React.FC<HeaderProps> = ({
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
 
-            <a href="/" className="flex items-center shrink-0">
+            <a 
+              href="/" 
+              onClick={(e) => {
+                if (onGoHome) {
+                  e.preventDefault();
+                  onGoHome();
+                }
+              }}
+              className="flex items-center shrink-0 cursor-pointer"
+            >
               <UnitworldLogo logoUrl={brandLogoUrl} className="h-9 sm:h-11" showTagline={true} />
             </a>
           </div>
@@ -320,6 +344,18 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="py-3 border-b border-slate-100 space-y-2">
+              {onOpenMediaUploader && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenMediaUploader();
+                  }}
+                  className="w-full text-left px-3 py-2 bg-amber-50 border border-amber-200 text-amber-900 font-bold text-xs rounded-lg flex items-center gap-2"
+                >
+                  <Upload className="w-4 h-4 text-amber-600" />
+                  Upload My Media & Galleries
+                </button>
+              )}
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
