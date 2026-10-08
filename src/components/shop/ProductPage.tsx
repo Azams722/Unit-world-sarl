@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { Product } from '../../types';
 import { formatCurrency, generateProductSlug } from '../../utils/formatters';
-import { processMediaFile, uploadMediaFile } from '../../utils/mediaStorage';
 import { MediaViewer } from '../common/MediaViewer';
 
 interface ProductPageProps {
@@ -35,7 +34,7 @@ interface ProductPageProps {
   onSelectProduct: (product: Product) => void;
   onAddToCart: (product: Product, quantity?: number) => void;
   onInstantBuy: (product: Product) => void;
-  onUpdateProduct: (product: Product) => Promise<void>;
+  onUpdateProduct?: (product: Product) => Promise<void>;
 }
 
 export const ProductPage: React.FC<ProductPageProps> = ({
@@ -45,17 +44,11 @@ export const ProductPage: React.FC<ProductPageProps> = ({
   onSelectProduct,
   onAddToCart,
   onInstantBuy,
-  onUpdateProduct,
 }) => {
   const [selectedMediaIdx, setSelectedMediaIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [mediaUrlInput, setMediaUrlInput] = useState('');
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Helper to determine if a URL represents a video
   const isVideoUrl = (url: string) => {
@@ -210,128 +203,6 @@ Please provide ordering, inspection and delivery confirmation.`
     window.open(`https://wa.me/2348008648967?text=${text}`, '_blank');
   };
 
-  // Upload exact video or picture files directly using in-browser compression & IndexedDB video vault
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsUploading(true);
-    setUploadStatus(`Processing & compressing ${files.length} media file(s)...`);
-
-    const newImages = [...(product.images || [])];
-    const newVideos = [...(product.videos || [])];
-
-    try {
-      for (const file of Array.from(files)) {
-        const uploaded = await processMediaFile(file);
-        if (uploaded.isVideo) {
-          if (!newVideos.includes(uploaded.url)) newVideos.unshift(uploaded.url);
-        } else {
-          if (!newImages.includes(uploaded.url)) newImages.unshift(uploaded.url);
-        }
-      }
-
-      const updatedProduct: Product = {
-        ...product,
-        images: newImages,
-        videos: newVideos,
-        updatedAt: new Date().toISOString()
-      };
-
-      await onUpdateProduct(updatedProduct);
-      setUploadStatus('Uploaded and saved permanently to Database & Media Vault!');
-      setTimeout(() => setUploadStatus(null), 3500);
-    } catch (err) {
-      console.error('Upload failed:', err);
-      setUploadStatus('Upload note: error saving media file.');
-      setTimeout(() => setUploadStatus(null), 3000);
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const handleClearPlaceholders = async () => {
-    const userImages = (product.images || []).filter(u => u.startsWith('data:image/') || u.startsWith('idb:') || u.includes('cloudinary.com/dgc6ootad/image/upload/v'));
-    const userVideos = (product.videos || []).filter(u => u.startsWith('data:video/') || u.startsWith('idb:video:') || u.includes('cloudinary.com/dgc6ootad/video/upload/v'));
-
-    if (userImages.length === 0 && userVideos.length === 0) {
-      setUploadStatus('Please upload your authentic photos/videos first before clearing placeholders.');
-      setTimeout(() => setUploadStatus(null), 3500);
-      return;
-    }
-
-    const updatedProduct: Product = {
-      ...product,
-      images: userImages,
-      videos: userVideos,
-      updatedAt: new Date().toISOString()
-    };
-
-    await onUpdateProduct(updatedProduct);
-    setUploadStatus('Strictly using your uploaded media now! All AI placeholders removed.');
-    setTimeout(() => setUploadStatus(null), 3500);
-  };
-
-  const handleAddMediaUrl = async () => {
-    const trimmed = mediaUrlInput.trim();
-    if (!trimmed) return;
-    const isVid = isVideoUrl(trimmed);
-    const newImages = [...(product.images || [])];
-    const newVideos = [...(product.videos || [])];
-
-    if (isVid) {
-      if (!newVideos.includes(trimmed)) newVideos.push(trimmed);
-    } else {
-      if (!newImages.includes(trimmed)) newImages.push(trimmed);
-    }
-
-    const updatedProduct: Product = {
-      ...product,
-      images: newImages,
-      videos: newVideos,
-      updatedAt: new Date().toISOString()
-    };
-
-    setIsUploading(true);
-    setUploadStatus('Saving media URL strictly to Database...');
-    try {
-      await onUpdateProduct(updatedProduct);
-      setMediaUrlInput('');
-      setShowUrlInput(false);
-      setUploadStatus('Saved permanently to Database!');
-      setTimeout(() => setUploadStatus(null), 3000);
-    } catch {
-      setUploadStatus('Failed to update product');
-      setTimeout(() => setUploadStatus(null), 2500);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleRemoveMedia = async (indexToRemove: number) => {
-    const target = mediaList[indexToRemove];
-    if (!target) return;
-    const newImages = (product.images || []).filter(u => u !== target.url);
-    const newVideos = (product.videos || []).filter(u => u !== target.url);
-
-    const updatedProduct: Product = {
-      ...product,
-      images: newImages,
-      videos: newVideos,
-      updatedAt: new Date().toISOString()
-    };
-
-    try {
-      await onUpdateProduct(updatedProduct);
-      if (selectedMediaIdx >= mediaList.length - 1) {
-        setSelectedMediaIdx(Math.max(0, mediaList.length - 2));
-      }
-    } catch (err) {
-      console.error('Failed to remove media:', err);
-    }
-  };
-
   const isAutomobile = product.category === 'Automobiles & Cars';
   const isOutOfStock = product.stock !== undefined && product.stock <= 0;
   const relatedProducts = allProducts.filter(p => p.id !== product.id && (p.category === product.category || (p.tags && product.tags && p.tags.some(t => product.tags?.includes(t))))).slice(0, 4);
@@ -391,19 +262,12 @@ Please provide ordering, inspection and delivery confirmation.`
                   )}
                 </div>
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-900 text-white space-y-3">
-                  <Sparkles className="w-10 h-10 text-rose-400" />
-                  <h3 className="font-playfair text-lg font-bold">{product.title} — Verified Listing</h3>
+                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-900 text-white space-y-2">
+                  <Sparkles className="w-10 h-10 text-amber-400" />
+                  <h3 className="font-playfair text-lg font-bold">{product.title}</h3>
                   <p className="text-xs text-slate-300 max-w-sm">
-                    Awaiting owner media uploads. Click below to add your exact video recordings and photographs.
+                    Unitworld Sarl Official Marketplace Listing
                   </p>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="py-2.5 px-4 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer shadow-md"
-                  >
-                    <Upload className="w-4 h-4" />
-                    <span>Upload Exact Media to DB / Cloudinary</span>
-                  </button>
                 </div>
               )}
 
@@ -462,13 +326,14 @@ Please provide ordering, inspection and delivery confirmation.`
             </div>
 
             {/* Thumbnails Row */}
-            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin items-center">
-              {mediaList.map((item, idx) => (
-                <div key={idx} className="relative group/thumb shrink-0">
+            {hasGallery && (
+              <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin items-center">
+                {mediaList.map((item, idx) => (
                   <button
+                    key={idx}
                     type="button"
                     onClick={() => setSelectedMediaIdx(idx)}
-                    className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 block transition-all cursor-pointer ${
+                    className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 block shrink-0 transition-all cursor-pointer ${
                       selectedMediaIdx === idx 
                         ? 'border-[#0284C7] ring-2 ring-sky-300 scale-102 shadow-md' 
                         : 'border-slate-200 opacity-70 hover:opacity-100'
@@ -486,114 +351,19 @@ Please provide ordering, inspection and delivery confirmation.`
                       {idx + 1}
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveMedia(idx);
-                    }}
-                    title="Remove this uploaded media"
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold flex items-center justify-center shadow opacity-0 group-hover/thumb:opacity-100 transition-opacity cursor-pointer z-20"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-
-              {/* Upload Trigger Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="w-20 h-20 rounded-xl border-2 border-dashed border-sky-400 hover:border-sky-600 bg-sky-50/70 hover:bg-sky-100 text-sky-800 flex flex-col items-center justify-center shrink-0 cursor-pointer transition-colors p-2 shadow-2xs"
-                title="Upload exact photos or video recordings from your device"
-              >
-                <Upload className="w-5 h-5 mb-1 text-sky-600" />
-                <span className="text-[9px] font-black text-center leading-tight">
-                  {isUploading ? 'Saving...' : 'Upload Media'}
-                </span>
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept="image/*,video/*"
-                multiple
-                className="hidden"
-              />
-
-              {/* Paste Direct URL Trigger Button */}
-              <button
-                type="button"
-                onClick={() => setShowUrlInput(!showUrlInput)}
-                className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 hover:border-slate-500 bg-slate-50 hover:bg-slate-100 text-slate-700 flex flex-col items-center justify-center shrink-0 cursor-pointer transition-colors p-2 shadow-2xs"
-                title="Paste Cloudinary URL or direct video/image link"
-              >
-                <ExternalLink className="w-4 h-4 mb-1 text-slate-600" />
-                <span className="text-[9px] font-bold text-center leading-tight">
-                  Paste URL / Cloudinary
-                </span>
-              </button>
-            </div>
-
-            {/* Gallery Control Bar */}
-            <div className="flex items-center justify-between gap-2 pt-1 text-xs">
-              <span className="text-slate-500 font-medium text-[11px]">
-                {mediaList.length} media item{mediaList.length !== 1 ? 's' : ''} in gallery
-              </span>
-              <button
-                type="button"
-                onClick={handleClearPlaceholders}
-                className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-                title="Remove any catalog/stock placeholders so only your real uploaded photos and videos remain"
-              >
-                Clear AI/Stock Placeholders
-              </button>
-            </div>
-
-            {/* Optional Paste URL Input Bar */}
-            {showUrlInput && (
-              <div className="p-3 bg-white border border-slate-300 rounded-xl shadow-xs space-y-2 animate-in fade-in">
-                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <ExternalLink className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Add Cloudinary / Direct Media URL</span>
-                </span>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={mediaUrlInput}
-                    onChange={(e) => setMediaUrlInput(e.target.value)}
-                    placeholder="https://res.cloudinary.com/... or https://...video.mp4"
-                    className="flex-1 text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-sky-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddMediaUrl}
-                    disabled={!mediaUrlInput.trim() || isUploading}
-                    className="px-3 py-2 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
-                  >
-                    Save to DB
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowUrlInput(false)}
-                    className="px-2.5 py-2 text-slate-500 hover:text-slate-800 text-xs font-bold"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                ))}
               </div>
             )}
 
-            {/* Direct Upload & Storage Persistence Status */}
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs text-slate-600">
-              <span className="flex items-center gap-1.5 font-medium">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Strict Database & Cloudinary Persistence Enabled</span>
+            {/* Gallery Info Bar */}
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+              <span className="flex items-center gap-1.5 font-semibold text-[11px] text-slate-700">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                Unitworld Verified Official Gallery
               </span>
-              {uploadStatus && (
-                <span className="font-bold text-sky-700 animate-pulse">{uploadStatus}</span>
-              )}
+              <span className="text-[11px] text-slate-500">
+                {mediaList.length} media asset{mediaList.length !== 1 ? 's' : ''}
+              </span>
             </div>
           </div>
 

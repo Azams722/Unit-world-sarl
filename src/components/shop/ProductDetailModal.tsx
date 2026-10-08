@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { Product } from '../../types';
 import { formatCurrency, generateProductSlug } from '../../utils/formatters';
-import { processMediaFile } from '../../utils/mediaStorage';
 import { MediaViewer } from '../common/MediaViewer';
 
 interface ProductDetailModalProps {
@@ -40,15 +39,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onClose,
   onAddToCart,
   onInstantBuy,
-  onUpdateProduct,
   onOpenProductPage,
 }) => {
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [extraMedia, setExtraMedia] = useState<{ url: string; isVideo: boolean }[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isVideoUrl = (url: string) => {
     if (!url) return false;
@@ -68,7 +64,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     setSelectedImageIdx(0);
     setQuantity(1);
     setIsLightboxOpen(false);
-    setExtraMedia([]);
   }, [product?.id]);
 
   if (!product) return null;
@@ -79,12 +74,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const mediaList: { url: string; isVideo: boolean }[] = [
     ...rawImages.map((u) => ({ url: u, isVideo: isVideoUrl(u) })),
     ...rawVideos.map((u) => ({ url: u, isVideo: true })),
-    ...extraMedia,
   ];
 
   if (mediaList.length === 0) {
     mediaList.push({
-      url: '/src/assets/images/hero_marketplace_jumia_1790462828695.jpg',
+      url: '/assets/images/hero_marketplace_jumia_1790462828695.jpg',
       isVideo: false,
     });
   }
@@ -140,39 +134,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const handleNextImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     setSelectedImageIdx((prev) => (prev < mediaList.length - 1 ? prev + 1 : 0));
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0 || !product) return;
-
-    try {
-      const newImages = [...(product.images || [])];
-      const newVideos = [...(product.videos || [])];
-
-      for (const file of Array.from(files)) {
-        const item = await processMediaFile(file);
-        if (item.isVideo) {
-          if (!newVideos.includes(item.url)) newVideos.unshift(item.url);
-        } else {
-          if (!newImages.includes(item.url)) newImages.unshift(item.url);
-        }
-      }
-
-      if (onUpdateProduct) {
-        const updatedProduct: Product = {
-          ...product,
-          images: newImages,
-          videos: newVideos,
-          updatedAt: new Date().toISOString()
-        };
-        await onUpdateProduct(updatedProduct);
-      }
-    } catch (err) {
-      console.error('Failed to process upload in modal:', err);
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
   };
 
   return (
@@ -317,40 +278,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         </span>
                       </button>
                     ))}
-
-                    {/* Add Photo/Video Button */}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-16 h-16 rounded-lg border-2 border-dashed border-sky-400 hover:border-sky-600 bg-sky-50/70 hover:bg-sky-100 text-sky-700 flex flex-col items-center justify-center shrink-0 cursor-pointer transition-colors p-1"
-                      title="Upload exact video or pictures from your device"
-                    >
-                      <Upload className="w-4 h-4 mb-0.5 text-sky-600" />
-                      <span className="text-[8px] font-extrabold text-center leading-tight">Add Video / Photo</span>
-                    </button>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      accept="image/*,video/*"
-                      multiple
-                      className="hidden"
-                    />
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                    <span className="flex items-center gap-1 font-medium">
-                      <Video className="w-3.5 h-3.5 text-sky-600" />
-                      Authentic product media gallery (photos & videos)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="text-[#0284C7] hover:underline font-bold text-[11px] cursor-pointer"
-                    >
-                      + Upload Local Files
-                    </button>
-                  </div>
+                  {hasGallery && (
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      <span className="flex items-center gap-1 font-medium">
+                        <Video className="w-3.5 h-3.5 text-sky-600" />
+                        Authentic product media gallery ({mediaList.length} items)
+                      </span>
+                      <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        Verified
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Verified Inspection Guarantee */}

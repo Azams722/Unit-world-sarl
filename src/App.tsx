@@ -59,7 +59,6 @@ import { OrderTrackingModal } from './components/orders/OrderTrackingModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { CustomerDashboard } from './components/customer/CustomerDashboard';
 import { AdminPortal } from './components/admin/AdminPortal';
-import { MediaUploaderModal } from './components/admin/MediaUploaderModal';
 import { formatCurrency, generateProductSlug } from './utils/formatters';
 import { CATEGORIES, INITIAL_PRODUCTS } from './data/initialProducts';
 
@@ -68,8 +67,6 @@ export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [isMediaUploaderOpen, setIsMediaUploaderOpen] = useState(false);
-  const [mediaUploaderInitialProduct, setMediaUploaderInitialProduct] = useState<string | undefined>(undefined);
   const [gatewaySettings, setGatewaySettings] = useState<GatewaySettings>({
     paystackPublicKey: 'pk_test_d347895e69123847291a890472e819b5d2',
     paystackEnabled: true,
@@ -292,7 +289,17 @@ export default function App() {
     const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       if (!snapshot.empty) {
         const liveProducts: Product[] = [];
-        snapshot.forEach((d) => liveProducts.push(d.data() as Product));
+        snapshot.forEach((d) => {
+          const prod = d.data() as Product;
+          if (prod.images) {
+            prod.images = prod.images.map((img: string) =>
+              typeof img === 'string' && img.startsWith('/src/assets/images/')
+                ? img.replace('/src/assets/images/', '/assets/images/')
+                : img
+            );
+          }
+          liveProducts.push(prod);
+        });
         setProducts(liveProducts);
       }
     }, (err) => {
@@ -491,6 +498,7 @@ export default function App() {
   const fashionProducts = products.filter((p) => p.category === 'Fashion');
   const groceryProducts = products.filter((p) => p.category === 'Supermarket & Raw Foods');
   const techProducts = products.filter((p) => p.category === 'Phones & Tablets' || p.category === 'Electronics');
+  const jumiaEverydayProducts = products.filter((p) => p.id.startsWith('prod-jumia-'));
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900 pb-16 md:pb-0">
@@ -517,10 +525,7 @@ export default function App() {
         onOpenTracking={openTrackingModal}
         notifications={notifications}
         onGoHome={handleBackFromProductPage}
-        onOpenMediaUploader={() => {
-          setMediaUploaderInitialProduct(undefined);
-          setIsMediaUploaderOpen(true);
-        }}
+        onOpenAdmin={openAdminModal}
       />
 
       {/* 2. Main Content Body or Dedicated Product Page */}
@@ -565,7 +570,7 @@ export default function App() {
             {/* Central Campaign Hero Banner */}
             <div className="lg:col-span-6 relative rounded-2xl overflow-hidden min-h-[300px] sm:min-h-[360px] bg-slate-900 border border-slate-800 shadow-md flex flex-col justify-end p-6 sm:p-8">
               <img
-                src="/src/assets/images/hero_marketplace_jumia_1790462828695.jpg"
+                src="/assets/images/hero_marketplace_jumia_1790462828695.jpg"
                 alt="Unitworld Global Marketplace"
                 referrerPolicy="no-referrer"
                 className="absolute inset-0 w-full h-full object-cover opacity-60"
@@ -702,6 +707,65 @@ export default function App() {
                 />
               ))}
             </div>
+          </section>
+        )}
+
+        {/* 3B. SHOWCASE SECTION: EVERYDAY BESTSELLERS & ESSENTIALS (JUMIA BENCHMARK + 5% FAIR VALUE) */}
+        {selectedCategory === 'All Departments' && !searchQuery && jumiaEverydayProducts.length > 0 && (
+          <section className="bg-white rounded-2xl border border-amber-200/80 p-4 sm:p-6 shadow-2xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-amber-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-xs">
+                  <Flame className="w-5 h-5 fill-current" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-playfair text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                      Everyday Bestsellers & Appliances
+                    </h2>
+                    <span className="bg-amber-100 text-amber-900 text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider">
+                      Jumia Top Sellers (+5% Fair Margin)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Authentic real-life Nigerian household favorites: Indomie cartons, Oraimo 30000mAh, Binatone 18" fan, Silver Crest 4500W blender, Itel A70, Nivea roll-ons, and pantry staples.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-600">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Verified Direct Stock ({jumiaEverydayProducts.length} items)</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
+              {jumiaEverydayProducts.slice(0, 6).map((item) => (
+                <ProductCard
+                  key={item.id}
+                  product={item}
+                  onSelect={handleSelectProduct}
+                  onAddToCart={handleAddToCart}
+                  onDirectDm={handleDirectDm}
+                />
+              ))}
+            </div>
+
+            {jumiaEverydayProducts.length > 6 && (
+              <div className="pt-2 border-t border-slate-100">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+                  {jumiaEverydayProducts.slice(6).map((item) => (
+                    <ProductCard
+                      key={item.id}
+                      product={item}
+                      onSelect={handleSelectProduct}
+                      onAddToCart={handleAddToCart}
+                      onDirectDm={handleDirectDm}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         )}
 
@@ -1096,21 +1160,6 @@ export default function App() {
               createdAt: new Date().toISOString(),
             };
             setCurrentUser(demoAdmin);
-          }
-        }}
-      />
-
-      {/* Media Uploader Modal for batch uploading WhatsApp media */}
-      <MediaUploaderModal
-        isOpen={isMediaUploaderOpen}
-        onClose={() => setIsMediaUploaderOpen(false)}
-        products={products}
-        initialProductId={mediaUploaderInitialProduct}
-        onUpdateProduct={async (updated) => {
-          await updateProductInDb(updated.id, updated);
-          setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-          if (productPageProduct && productPageProduct.id === updated.id) {
-            setProductPageProduct(updated);
           }
         }}
       />

@@ -33,7 +33,7 @@ interface HeaderProps {
   notifications: AppNotification[];
   brandLogoUrl?: string;
   onGoHome?: () => void;
-  onOpenMediaUploader?: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
   notifications,
   brandLogoUrl,
   onGoHome,
-  onOpenMediaUploader,
+  onOpenAdmin,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -76,14 +76,14 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-5 text-slate-300">
-            {onOpenMediaUploader && (
+            {currentUser?.role === 'admin' && onOpenAdmin && (
               <button
-                onClick={onOpenMediaUploader}
+                onClick={onOpenAdmin}
                 className="hover:text-amber-300 text-amber-400 font-bold transition-colors cursor-pointer flex items-center gap-1.5 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30"
-                title="Upload & manage your authentic WhatsApp photos and videos"
+                title="Open Backend Admin Portal"
               >
-                <Upload className="w-3.5 h-3.5 text-amber-400" />
-                Upload My Media & Galleries
+                <LayoutDashboard className="w-3.5 h-3.5 text-amber-400" />
+                Admin Backend Portal
               </button>
             )}
             <button
@@ -219,6 +219,19 @@ export const Header: React.FC<HeaderProps> = ({
                         <p className="text-xs font-bold text-slate-900 truncate">{currentUser.email}</p>
                       </div>
 
+                      {currentUser.role === 'admin' && onOpenAdmin && (
+                        <button
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            onOpenAdmin();
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center gap-2 border-b border-amber-100"
+                        >
+                          <LayoutDashboard className="w-4 h-4 text-amber-600" />
+                          Backend Admin Portal
+                        </button>
+                      )}
+
                       <button
                         onClick={() => {
                           setUserDropdownOpen(false);
@@ -344,16 +357,16 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="py-3 border-b border-slate-100 space-y-2">
-              {onOpenMediaUploader && (
+              {currentUser?.role === 'admin' && onOpenAdmin && (
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    onOpenMediaUploader();
+                    onOpenAdmin();
                   }}
                   className="w-full text-left px-3 py-2 bg-amber-50 border border-amber-200 text-amber-900 font-bold text-xs rounded-lg flex items-center gap-2"
                 >
-                  <Upload className="w-4 h-4 text-amber-600" />
-                  Upload My Media & Galleries
+                  <LayoutDashboard className="w-4 h-4 text-amber-600" />
+                  Admin Backend Portal
                 </button>
               )}
               <button

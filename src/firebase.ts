@@ -117,18 +117,20 @@ export async function syncAllProductsToDb(overwriteExisting = true): Promise<Pro
     for (const prod of INITIAL_PRODUCTS) {
       const ref = doc(db, 'products', prod.id);
       let toSave = { ...prod };
-      try {
-        const existingDoc = await getDoc(ref);
-        if (existingDoc.exists()) {
-          const exData = existingDoc.data() as Product;
-          if (exData.images && exData.images.length > 0) {
-            toSave.images = exData.images;
+      if (!overwriteExisting) {
+        try {
+          const existingDoc = await getDoc(ref);
+          if (existingDoc.exists()) {
+            const exData = existingDoc.data() as Product;
+            if (exData.images && exData.images.length > 0) {
+              toSave.images = exData.images;
+            }
+            if (exData.videos && exData.videos.length > 0) {
+              toSave.videos = exData.videos;
+            }
           }
-          if (exData.videos && exData.videos.length > 0) {
-            toSave.videos = exData.videos;
-          }
-        }
-      } catch {}
+        } catch {}
+      }
       batch.set(ref, toSave);
     }
     await batch.commit();
@@ -187,8 +189,14 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
         }
       });
 
-      // If new hair products are missing from DB, trigger sync
-      if (!existingIds.has('prod-hair-luxury-5x5-bounce') || !existingIds.has('prod-hair-sdd-celebrity-fringe')) {
+      // If new Jumia products or updated hair products are missing from DB, trigger sync
+      if (
+        !existingIds.has('prod-jumia-indomie-chicken-carton') ||
+        !existingIds.has('prod-jumia-oraimo-powerbank-30000mah') ||
+        !existingIds.has('prod-jumia-binatone-rechargeable-fan') ||
+        !existingIds.has('prod-hair-luxury-5x5-bounce') ||
+        !existingIds.has('prod-hair-sdd-celebrity-fringe')
+      ) {
         needsUpdate = true;
       }
     }
@@ -199,7 +207,17 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
     }
 
     const loaded: Product[] = [];
-    productsSnapshot.forEach((d) => loaded.push(d.data() as Product));
+    productsSnapshot.forEach((d) => {
+      const prod = d.data() as Product;
+      if (prod.images) {
+        prod.images = prod.images.map((img: string) =>
+          typeof img === 'string' && img.startsWith('/src/assets/images/')
+            ? img.replace('/src/assets/images/', '/assets/images/')
+            : img
+        );
+      }
+      loaded.push(prod);
+    });
 
     // Ensure all INITIAL_PRODUCTS are included even if not yet saved
     const loadedIds = new Set(loaded.map(p => p.id));

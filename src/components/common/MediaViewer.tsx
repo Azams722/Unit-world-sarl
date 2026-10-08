@@ -27,16 +27,28 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   fallbackSrc = 'https://res.cloudinary.com/dgc6ootad/image/upload/v1790464730/Unitworld_Trustworthy_Ecommerce_Marketplace_rmlqq8.png',
   onClick,
 }) => {
-  const [resolvedSrc, setResolvedSrc] = useState<string>(url.startsWith('idb:') ? '' : url);
+  const cleanUrl = React.useMemo(() => {
+    if (!url) return '';
+    if (url.startsWith('/src/assets/images/')) {
+      return url.replace('/src/assets/images/', '/assets/images/');
+    }
+    if (url.startsWith('src/assets/images/')) {
+      return url.replace('src/assets/images/', '/assets/images/');
+    }
+    return url;
+  }, [url]);
+
+  const [resolvedSrc, setResolvedSrc] = useState<string>(cleanUrl.startsWith('idb:') ? '' : cleanUrl);
   const [hasError, setHasError] = useState(false);
-  const [loading, setLoading] = useState(url.startsWith('idb:'));
+  const [fallbackFailed, setFallbackFailed] = useState(false);
+  const [loading, setLoading] = useState(cleanUrl.startsWith('idb:'));
 
   useEffect(() => {
     let isMounted = true;
 
-    if (url.startsWith('idb:')) {
+    if (cleanUrl.startsWith('idb:')) {
       setLoading(true);
-      resolveMediaUrl(url).then((res) => {
+      resolveMediaUrl(cleanUrl).then((res) => {
         if (isMounted) {
           if (res) {
             setResolvedSrc(res);
@@ -47,7 +59,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
         }
       });
     } else {
-      setResolvedSrc(url);
+      setResolvedSrc(cleanUrl);
       setLoading(false);
       setHasError(false);
     }
@@ -55,7 +67,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [url]);
+  }, [cleanUrl]);
 
   const actualIsVideo = isVideo || 
     url.includes('video') || 
@@ -100,14 +112,34 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     );
   }
 
+  if (fallbackFailed) {
+    return (
+      <div 
+        onClick={onClick}
+        className={`flex flex-col items-center justify-center bg-slate-900 text-slate-400 p-4 select-none ${className}`}
+      >
+        <ImageIcon className="w-8 h-8 text-sky-400 mb-1" />
+        <span className="text-[11px] font-bold text-slate-300 text-center tracking-wide">{alt || 'Unitworld Marketplace'}</span>
+      </div>
+    );
+  }
+
+  const effectiveSrc = hasError || !resolvedSrc ? fallbackSrc : resolvedSrc;
+
   return (
     <img
-      src={hasError || !resolvedSrc ? fallbackSrc : resolvedSrc}
+      src={effectiveSrc}
       alt={alt}
       referrerPolicy="no-referrer"
       className={className}
       onClick={onClick}
-      onError={() => setHasError(true)}
+      onError={() => {
+        if (!hasError) {
+          setHasError(true);
+        } else {
+          setFallbackFailed(true);
+        }
+      }}
     />
   );
 };

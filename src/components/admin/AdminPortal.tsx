@@ -15,6 +15,7 @@ import {
   AlertTriangle, 
   Search, 
   CheckCircle2, 
+  Check, 
   RefreshCw, 
   Eye, 
   Building, 
@@ -38,27 +39,42 @@ import {
   Upload,
   Mail,
   Phone,
-  ExternalLink
+  ExternalLink,
+  Film
 } from 'lucide-react';
 import { Product, Order, GatewaySettings, BrandSettings, OrderStatus, AdminUser, UserProfile } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { CATEGORIES } from '../../data/initialProducts';
 import { UnitworldLogo } from '../common/UnitworldLogo';
 import { DEFAULT_BRAND_LOGO } from '../../firebase';
+import { processMediaFile } from '../../utils/mediaStorage';
+import { MediaViewer } from '../common/MediaViewer';
+import { MediaUploaderModal } from './MediaUploaderModal';
 
 const PRESET_IMAGE_ASSETS = [
-  { label: '2025 Land Cruiser VXR Front', url: '/src/assets/images/car_landcruiser_vxr_1790462842346.jpg' },
-  { label: '2021 Highlander XSE Exterior', url: '/src/assets/images/car_highlander_xse_1790462851011.jpg' },
-  { label: '2017 Lexus RX350 Luxury', url: '/src/assets/images/car_lexus_rx350_1790462861358.jpg' },
-  { label: '2010 Toyota Camry Toks', url: '/src/assets/images/car_camry_2010_1790462872857.jpg' },
-  { label: 'Benue Farm Fresh Yam Tubers', url: '/src/assets/images/real_benue_yam_tubers_1790463596532.jpg' },
-  { label: 'Pure Delta Palm Oil 25L Keg', url: '/src/assets/images/delta_palm_oil_keg_1790463610040.jpg' },
-  { label: '50kg Royal Stallion Rice Bag', url: '/src/assets/images/royal_stallion_rice_1790463620369.jpg' },
-  { label: 'Olive Ribbed 2-Piece Set', url: '/src/assets/images/olive_twopiece_set_1790463639851.jpg' },
-  { label: 'Patchwork Resort Set', url: '/src/assets/images/patchwork_resort_set_1790463649928.jpg' },
-  { label: 'Monochrome Split Set', url: '/src/assets/images/monochrome_split_set_1790463659716.jpg' },
-  { label: 'Khaki Fleece Shorts', url: '/src/assets/images/fleece_shorts_khaki_1790463670407.jpg' },
-  { label: 'Striped Knit Polo & Shorts', url: '/src/assets/images/striped_knit_set_1790463679741.jpg' },
+  { label: '2025 Land Cruiser VXR Front', url: '/assets/images/car_landcruiser_vxr_1790462842346.jpg' },
+  { label: '2021 Highlander XSE Exterior', url: '/assets/images/car_highlander_xse_1790462851011.jpg' },
+  { label: '2017 Highlander Limited Luxury', url: '/assets/images/car_highlander_limited_1790462852222.jpg' },
+  { label: '2017 Lexus RX350 Luxury', url: '/assets/images/car_lexus_rx350_1790462861358.jpg' },
+  { label: '2010 Toyota Camry Toks', url: '/assets/images/car_camry_2010_1790462872857.jpg' },
+  { label: 'Indomie Chicken Flavor Carton', url: '/assets/images/jumia_indomie_chicken_carton.jpg' },
+  { label: 'Oraimo 30000mAh Power Bank', url: '/assets/images/jumia_oraimo_powerbank_30000mah.jpg' },
+  { label: 'Oraimo Watch 5 Lite Smartwatch', url: '/assets/images/jumia_oraimo_smartwatch.jpg' },
+  { label: 'Binatone 18" Standing Fan', url: '/assets/images/jumia_electric_standing_fan.jpg' },
+  { label: 'Silver Crest 4500W Blender', url: 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Itel A70 128GB Smartphone', url: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Nivea Men 72H Roll-On 3-Pack', url: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Golden Penny Soya Oil 5L', url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Nestle Milo Refill Pack 800g', url: 'https://images.unsplash.com/photo-1542990253-0d0f5be5f0ed?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Dettol Disinfectant Liquid 1L', url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Benue Farm Fresh Yam Tubers', url: '/assets/images/real_benue_yam_tubers_1790463596532.jpg' },
+  { label: 'Pure Delta Palm Oil 25L Keg', url: '/assets/images/delta_palm_oil_keg_1790463610040.jpg' },
+  { label: '50kg Royal Stallion Rice Bag', url: '/assets/images/royal_stallion_rice_1790463620369.jpg' },
+  { label: 'Olive Ribbed 2-Piece Set', url: '/assets/images/olive_twopiece_set_1790463639851.jpg' },
+  { label: 'Patchwork Resort Set', url: '/assets/images/patchwork_resort_set_1790463649928.jpg' },
+  { label: 'Monochrome Split Set', url: '/assets/images/monochrome_split_set_1790463659716.jpg' },
+  { label: 'Khaki Fleece Shorts', url: '/assets/images/fleece_shorts_khaki_1790463670407.jpg' },
+  { label: 'Striped Knit Polo & Shorts', url: '/assets/images/striped_knit_set_1790463679741.jpg' },
   { label: 'iPhone 16 Pro Max Desert', url: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80' },
   { label: 'Sony Bravia 4K 65-Inch TV', url: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80' },
   { label: 'Luxury 5x5 Bounce Human Hair', url: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1000&q=80' },
@@ -112,9 +128,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onMakeCurrentUserAdmin,
   onUpdateUser,
 }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'orders' | 'users' | 'admins' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'media' | 'orders' | 'users' | 'admins' | 'settings'>('products');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccessMsg, setSyncSuccessMsg] = useState('');
+  const [isBatchMediaOpen, setIsBatchMediaOpen] = useState(false);
+  const [batchMediaInitialProduct, setBatchMediaInitialProduct] = useState<string | undefined>(undefined);
+  const [selectedMediaProductId, setSelectedMediaProductId] = useState<string>('');
+  const [mediaTabStatus, setMediaTabStatus] = useState<string | null>(null);
+  const [mediaTabUploading, setMediaTabUploading] = useState(false);
 
   // User management states
   const [userSearch, setUserSearch] = useState('');
@@ -290,19 +311,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setNewImageUrl('');
   };
 
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result && !formImages.includes(result)) {
-          setFormImages((prev) => [...prev, result]);
+    for (const file of Array.from(files)) {
+      try {
+        const processed = await processMediaFile(file);
+        if (processed && processed.url) {
+          setFormImages((prev) => prev.includes(processed.url) ? prev : [...prev, processed.url]);
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (err) {
+        console.error('Failed to compress and process image:', err);
+      }
+    }
     e.target.value = '';
   };
 
@@ -414,7 +435,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setFormFeatured(true);
     setFormRating(5.0);
     setFormReviewCount(1);
-    setFormImages(['/src/assets/images/car_landcruiser_vxr_1790462842346.jpg']);
+    setFormImages(['/assets/images/car_landcruiser_vxr_1790462842346.jpg']);
     setNewImageUrl('');
     setFormTags(['Verified', 'In Stock']);
     setNewTagInput('');
@@ -528,7 +549,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
     const finalImages = formImages.length > 0 
       ? formImages 
-      : ['/src/assets/images/hero_marketplace_jumia_1790462828695.jpg'];
+      : ['/assets/images/hero_marketplace_jumia_1790462828695.jpg'];
 
     const omittedArray = Array.from(omittedFields);
 
@@ -663,6 +684,22 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
           <button
             onClick={() => {
+              setActiveTab('media');
+              setEditingProduct(null);
+              setIsCreatingProduct(false);
+            }}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'media'
+                ? 'border-[#0284C7] text-[#0284C7] bg-white'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Upload className="w-4 h-4 text-amber-500" />
+            <span>Upload Media & Galleries</span>
+          </button>
+
+          <button
+            onClick={() => {
               setActiveTab('orders');
               setEditingProduct(null);
               setIsCreatingProduct(false);
@@ -744,7 +781,261 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
         {/* ERP Main Body */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50">
-          {/* TAB 1: PRODUCT INVENTORY CRUD (Full Field Edit, Omit Fields, Multi-Image Gallery) */}
+          {/* TAB: MEDIA VAULT & GALLERIES (ADMIN BACKEND ONLY) */}
+          {activeTab === 'media' && (() => {
+            const currentSelectedProduct = products.find(p => p.id === (selectedMediaProductId || (products[0]?.id || ''))) || products[0];
+
+            const handleMediaTabUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+              const files = e.target.files;
+              if (!files || files.length === 0 || !currentSelectedProduct) return;
+
+              setMediaTabUploading(true);
+              setMediaTabStatus(`Processing & compressing ${files.length} media file(s)...`);
+
+              const newImages = [...(currentSelectedProduct.images || [])];
+              const newVideos = [...(currentSelectedProduct.videos || [])];
+
+              try {
+                for (const file of Array.from(files)) {
+                  setMediaTabStatus(`Compressing and storing ${file.name}...`);
+                  const processed = await processMediaFile(file);
+                  if (processed.isVideo) {
+                    if (!newVideos.includes(processed.url)) newVideos.unshift(processed.url);
+                  } else {
+                    if (!newImages.includes(processed.url)) newImages.unshift(processed.url);
+                  }
+                }
+
+                await onUpdateProduct(currentSelectedProduct.id, {
+                  images: newImages,
+                  videos: newVideos,
+                  updatedAt: new Date().toISOString()
+                });
+
+                setMediaTabStatus(`Successfully uploaded to ${currentSelectedProduct.title}!`);
+                setTimeout(() => setMediaTabStatus(null), 4000);
+              } catch (err: any) {
+                console.error('Media upload error:', err);
+                setMediaTabStatus(`Error: ${err?.message || 'Failed to upload media'}`);
+              } finally {
+                setMediaTabUploading(false);
+                e.target.value = '';
+              }
+            };
+
+            const handleRemoveMediaItem = async (urlToRemove: string, isVideo: boolean) => {
+              if (!currentSelectedProduct) return;
+              const newImages = (currentSelectedProduct.images || []).filter(u => u !== urlToRemove);
+              const newVideos = (currentSelectedProduct.videos || []).filter(u => u !== urlToRemove);
+
+              await onUpdateProduct(currentSelectedProduct.id, {
+                images: newImages,
+                videos: newVideos,
+                updatedAt: new Date().toISOString()
+              });
+              setMediaTabStatus('Removed media item from product.');
+              setTimeout(() => setMediaTabStatus(null), 3000);
+            };
+
+            const handleMakeCoverPhoto = async (imageUrl: string) => {
+              if (!currentSelectedProduct) return;
+              const currentImgs = (currentSelectedProduct.images || []).filter(u => u !== imageUrl);
+              const newImages = [imageUrl, ...currentImgs];
+
+              await onUpdateProduct(currentSelectedProduct.id, {
+                images: newImages,
+                updatedAt: new Date().toISOString()
+              });
+              setMediaTabStatus('Cover photo updated.');
+              setTimeout(() => setMediaTabStatus(null), 3000);
+            };
+
+            return (
+              <div className="space-y-6">
+                {/* Header card */}
+                <div className="p-5 bg-gradient-to-r from-slate-900 to-sky-950 text-white rounded-2xl shadow-md border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Upload className="w-6 h-6 text-amber-400" />
+                      <h3 className="text-base font-black uppercase tracking-tight">
+                        Backend Media Vault & Gallery Manager (Admins Only)
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-300 max-w-xl">
+                      Upload high-resolution WhatsApp vehicle pictures, fashion recordings, and raw foods. Photos are automatically compressed to ~120KB JPEG for fast database storage, and videos are streamed smoothly.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setBatchMediaInitialProduct(currentSelectedProduct?.id);
+                      setIsBatchMediaOpen(true);
+                    }}
+                    className="py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 transition-colors cursor-pointer shadow-sm shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Launch Batch Uploader Modal</span>
+                  </button>
+                </div>
+
+                {/* Product Selection Bar */}
+                <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="w-full sm:w-auto flex-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Select Product to Manage Media:
+                      </label>
+                      <select
+                        value={currentSelectedProduct?.id || ''}
+                        onChange={(e) => setSelectedMediaProductId(e.target.value)}
+                        className="w-full max-w-xl p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-sky-500"
+                      >
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            [{p.category}] {p.title} — {formatCurrency(p.price)} ({p.images?.length || 0} photos, {p.videos?.length || 0} videos)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {currentSelectedProduct && (
+                      <div className="text-xs text-slate-500 sm:text-right">
+                        <span className="font-mono text-slate-800 font-bold block">SKU: {currentSelectedProduct.sku || 'N/A'}</span>
+                        <span className="text-[11px]">
+                          {(currentSelectedProduct.images?.length || 0) + (currentSelectedProduct.videos?.length || 0)} Total Media Files
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {currentSelectedProduct && (
+                  <div className="space-y-6">
+                    {/* Upload Card */}
+                    <div className="p-6 bg-white rounded-2xl border-2 border-dashed border-sky-300 hover:border-sky-500 bg-sky-50/20 transition-all text-center space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mx-auto">
+                        <Upload className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900">
+                          Upload Photos & Videos for "{currentSelectedProduct.title}"
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                          Select multiple mobile images (JPG, PNG, WEBP) or recordings (MP4, WEBM). Files will be compressed & stored permanently in the database.
+                        </p>
+                      </div>
+
+                      <label className="inline-flex items-center gap-2 py-2.5 px-5 bg-[#0284C7] hover:bg-[#0369a1] text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm transition-colors">
+                        <Upload className="w-4 h-4" />
+                        <span>Choose Photos / Videos from Device</span>
+                        <input
+                          type="file"
+                          accept="image/*,video/*"
+                          multiple
+                          disabled={mediaTabUploading}
+                          onChange={handleMediaTabUpload}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {mediaTabStatus && (
+                        <div className="text-xs font-bold text-sky-800 bg-sky-100/80 py-2 px-4 rounded-lg max-w-md mx-auto animate-pulse">
+                          {mediaTabStatus}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Existing Gallery Display */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-sky-600" />
+                          <span>Current Product Gallery ({currentSelectedProduct.images?.length || 0} Photos, {currentSelectedProduct.videos?.length || 0} Videos)</span>
+                        </h4>
+                        <span className="text-[11px] text-slate-500">
+                          Photo #1 is the Primary Cover display shown on marketplace cards.
+                        </span>
+                      </div>
+
+                      {((currentSelectedProduct.images?.length || 0) + (currentSelectedProduct.videos?.length || 0) === 0) ? (
+                        <div className="p-8 text-center text-slate-400 text-xs italic bg-slate-50 rounded-xl">
+                          No media files uploaded yet for this product. Use the uploader above.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                          {/* Videos first */}
+                          {(currentSelectedProduct.videos || []).map((videoUrl, vIdx) => (
+                            <div key={`vid-${vIdx}`} className="bg-slate-900 border border-slate-300 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between">
+                              <div className="relative aspect-[4/3] bg-black">
+                                <MediaViewer url={videoUrl} isVideo={true} className="w-full h-full object-contain" />
+                                <span className="absolute top-1.5 left-1.5 bg-red-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded shadow">
+                                  Video #{vIdx + 1}
+                                </span>
+                              </div>
+                              <div className="p-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                                <span className="text-[10px] text-slate-500 font-semibold truncate">Video Showcase</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMediaItem(videoUrl, true)}
+                                  className="text-rose-600 hover:text-rose-800 p-1 text-xs cursor-pointer"
+                                  title="Remove video"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Images */}
+                          {(currentSelectedProduct.images || []).map((imgUrl, imgIdx) => (
+                            <div key={`img-${imgIdx}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between">
+                              <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
+                                <MediaViewer url={imgUrl} alt={`Photo ${imgIdx + 1}`} className="w-full h-full object-cover" />
+                                {imgIdx === 0 ? (
+                                  <span className="absolute top-1.5 left-1.5 bg-[#0284C7] text-white font-bold text-[9px] px-1.5 py-0.5 rounded shadow">
+                                    Primary Cover
+                                  </span>
+                                ) : (
+                                  <span className="absolute top-1.5 left-1.5 bg-black/70 text-white font-bold text-[9px] px-1.5 py-0.5 rounded">
+                                    #{imgIdx + 1}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="p-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                                {imgIdx > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMakeCoverPhoto(imgUrl)}
+                                    className="text-[10px] text-sky-700 font-bold hover:underline cursor-pointer"
+                                  >
+                                    Set as Cover
+                                  </button>
+                                ) : (
+                                  <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-0.5">
+                                    <Check className="w-3 h-3" /> Cover
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMediaItem(imgUrl, false)}
+                                  className="text-rose-600 hover:text-rose-800 p-1 text-xs cursor-pointer"
+                                  title="Remove photo"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* TAB 1: PRODUCT INVENTORY CRUD */}
           {activeTab === 'products' && (
             <div className="space-y-4">
               {(isCreatingProduct || editingProduct) ? (
@@ -1309,7 +1600,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                   alt={`Gallery photo ${idx + 1}`}
                                   className="w-full h-full object-cover"
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src = '/src/assets/images/hero_marketplace_jumia_1790462828695.jpg';
+                                    (e.target as HTMLImageElement).src = '/assets/images/hero_marketplace_jumia_1790462828695.jpg';
                                   }}
                                 />
                                 {idx === 0 ? (
@@ -1609,6 +1900,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                       <button
+                        onClick={() => {
+                          setActiveTab('media');
+                        }}
+                        className="py-2 px-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                        title="Upload photos and videos as administrator"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-slate-950" />
+                        <span>Upload Media (Admin)</span>
+                      </button>
+
+                      <button
                         onClick={handleSyncCatalog}
                         disabled={isSyncing}
                         className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
@@ -1649,7 +1951,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               <td className="p-3">
                                 <div className="flex items-center gap-3">
                                   <img
-                                    src={p.images?.[0] || '/src/assets/images/hero_marketplace_jumia_1790462828695.jpg'}
+                                    src={p.images?.[0] || '/assets/images/hero_marketplace_jumia_1790462828695.jpg'}
                                     alt={p.title}
                                     className="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0"
                                   />
@@ -2684,6 +2986,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             </div>
           </div>
         )}
+
+        {/* Batch Media Uploader Modal for Admin */}
+        <MediaUploaderModal
+          isOpen={isBatchMediaOpen}
+          onClose={() => setIsBatchMediaOpen(false)}
+          products={products}
+          initialProductId={batchMediaInitialProduct}
+          onUpdateProduct={async (updated) => {
+            await onUpdateProduct(updated.id, updated);
+          }}
+        />
       </div>
     </div>
   );
