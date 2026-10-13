@@ -469,11 +469,11 @@ export const INITIAL_PRODUCTS: Product[] = [
     updatedAt: new Date().toISOString(),
   },
 
-  // === JUMIA NIGERIA POPULAR EVERYDAY BESTSELLERS (+5% FAIR MARGIN WITH VERIFIED REAL PHOTOS) ===
+  // === POPULAR EVERYDAY ESSENTIALS & HOUSEHOLD STAPLES ===
 
-  // 16. INDOMIE REGULAR CHICKEN CARTON (Jumia: ₦11,300 -> Ours +5%: ₦11,865)
+  // 16. INDOMIE REGULAR CHICKEN CARTON (40 x 70g Packs)
   {
-    id: 'prod-jumia-indomie-chicken-carton',
+    id: 'prod-indomie-chicken-carton',
     title: 'Indomie Instant Noodles Regular Chicken Flavor (Carton of 40 x 70g Packs)',
     description: 'Authentic sealed carton of Indomie Instant Noodles Onion Chicken flavor. 40 individual 70g packs complete with original seasoning sachet and chili oil. Nigeria’s undisputed #1 household meal. Direct from factory depot.',
     price: 11865,
@@ -481,7 +481,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Supermarket & Raw Foods',
     condition: 'Brand New',
     images: [
-      '/assets/images/jumia_indomie_chicken_carton.jpg'
+      '/assets/images/indomie_chicken_carton.jpg'
     ],
     stock: 85,
     sku: 'UW-FOOD-INDOMIE-40X70',
@@ -490,21 +490,20 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: 240,
     featured: true,
-    tags: ['Indomie Chicken', 'Carton of 40', 'Jumia Best Seller', 'Supermarket', '+5% Fair Price'],
+    tags: ['Indomie Chicken', 'Carton of 40', 'Best Seller', 'Supermarket', 'Household'],
     specs: {
       'Pack Count': '40 Packs per Sealed Carton',
       'Weight per Pack': '70g Net Weight per Pack',
       'Flavor': 'Signature Onion Chicken Seasoning',
-      'Benchmark': 'Jumia Verified Price (₦11,300 + 5% Fair Delivery)',
       'Manufacturer': 'Dufil Prima Foods Plc'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 17. INDOMIE SUPER PACK CHICKEN CARTON (Jumia: ₦17,000 -> Ours +5%: ₦17,850)
+  // 17. INDOMIE SUPER PACK CHICKEN CARTON (40 x 120g Packs)
   {
-    id: 'prod-jumia-indomie-superpack-carton',
+    id: 'prod-indomie-superpack-carton',
     title: 'Indomie Instant Noodles Super Pack Chicken Flavor (Carton of 40 x 120g Packs)',
     description: 'Heavyweight Super Pack carton of Indomie Instant Noodles. 40 individual 120g packs for full satisfying meals. Sealed factory carton with authentic batch numbers.',
     price: 17850,
@@ -512,7 +511,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Supermarket & Raw Foods',
     condition: 'Brand New',
     images: [
-      '/assets/images/jumia_indomie_chicken_carton.jpg'
+      '/assets/images/indomie_chicken_carton.jpg'
     ],
     stock: 65,
     sku: 'UW-FOOD-INDOMIE-40X120',
@@ -521,21 +520,20 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 198,
     featured: true,
-    tags: ['Super Pack 120g', 'Carton of 40', 'Jumia Best Seller', 'Supermarket', '+5% Fair Price'],
+    tags: ['Super Pack 120g', 'Carton of 40', 'Best Seller', 'Supermarket'],
     specs: {
       'Pack Count': '40 Packs per Sealed Carton',
       'Weight per Pack': '120g Super Pack',
       'Flavor': 'Chicken Flavor',
-      'Benchmark': 'Jumia Verified Price (₦17,000 + 5% Fair Delivery)',
       'Manufacturer': 'Dufil Prima Foods Plc'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 18. ORAIMO 30000MAH FAST CHARGE POWER BANK (Jumia: ₦34,999 -> Ours +5%: ₦36,750)
+  // 18. ORAIMO 30000MAH FAST CHARGE POWER BANK
   {
-    id: 'prod-jumia-oraimo-powerbank-30000mah',
+    id: 'prod-oraimo-powerbank-30000mah',
     title: 'Oraimo 30000mAh Ultra-Fast Charging Power Bank with Digital LED Display',
     description: 'High-capacity 30,000mAh portable fast-charging power bank. Features dual high-speed USB-A outputs, Type-C two-way quick charging, bright LED digital battery percentage screen, and heavy-duty multi-protection circuit against power surges.',
     price: 36750,
@@ -543,7 +541,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Phones & Tablets',
     condition: 'Brand New',
     images: [
-      '/assets/images/jumia_oraimo_powerbank_30000mah.jpg'
+      '/assets/images/oraimo_powerbank_30000mah.jpg'
     ],
     stock: 45,
     sku: 'UW-ELEC-ORAIMO-PB30K',
@@ -552,22 +550,21 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: 312,
     featured: true,
-    tags: ['Oraimo 30000mAh', 'Power Bank', 'Fast Charging', 'LED Display', 'Type-C', '+5% Fair Price'],
+    tags: ['Oraimo 30000mAh', 'Power Bank', 'Fast Charging', 'LED Display', 'Type-C'],
     specs: {
       'Battery Capacity': '30,000mAh High-Density Polymer Cell',
       'Fast Charge Output': '22.5W Two-Way Fast Charge',
       'Ports': '2x USB Output, 1x Type-C In/Out, 1x Micro-USB',
       'Display': 'Digital LED Exact Percentage Indicator',
-      'Benchmark': 'Jumia Benchmark (₦34,999 + 5% Margin)',
       'Warranty': '1 Year Official Warranty'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 19. ORAIMO WATCH 5 LITE SMARTWATCH (Jumia: ₦22,000 -> Ours +5%: ₦23,100)
+  // 19. ORAIMO WATCH 5 LITE SMARTWATCH
   {
-    id: 'prod-jumia-oraimo-smartwatch',
+    id: 'prod-oraimo-smartwatch',
     title: 'Oraimo Watch 5 Lite 2.01" HD Screen Smartwatch (Bluetooth Calls & IP68)',
     description: 'Sleek premium smartwatch with vibrant 2.01-inch HD touch screen, crystal-clear Bluetooth phone call dialer, 100+ fitness sport modes, 24/7 heart rate and blood oxygen monitoring, and IP68 waterproof rating.',
     price: 23100,
@@ -575,7 +572,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Electronics',
     condition: 'Brand New',
     images: [
-      '/assets/images/jumia_oraimo_smartwatch.jpg'
+      '/assets/images/oraimo_smartwatch.jpg'
     ],
     stock: 35,
     sku: 'UW-ELEC-ORAIMO-W5L',
@@ -584,29 +581,28 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 154,
     featured: true,
-    tags: ['Oraimo Watch 5', 'Smartwatch', 'Bluetooth Calls', 'IP68 Waterproof', '+5% Fair Price'],
+    tags: ['Oraimo Watch 5', 'Smartwatch', 'Bluetooth Calls', 'IP68 Waterproof'],
     specs: {
       'Display': '2.01-inch Ultra HD Touch Display',
       'Connectivity': 'Bluetooth 5.3 Calling & Notifications',
       'Battery Life': 'Up to 7 Days Active Use',
-      'Waterproof': 'IP68 Water & Dust Resistant',
-      'Benchmark': 'Jumia Benchmark (₦22,000 + 5% Margin)'
+      'Waterproof': 'IP68 Water & Dust Resistant'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 20. BINATONE 18-INCH RECHARGEABLE STANDING FAN (Jumia: ₦58,000 -> Ours +5%: ₦60,900)
+  // 20. BINATONE 18-INCH RECHARGEABLE STANDING FAN
   {
-    id: 'prod-jumia-binatone-rechargeable-fan',
+    id: 'prod-binatone-rechargeable-fan',
     title: 'Binatone 18-Inch Standing Rechargeable Fan with Remote & USB Charger Port (RCFM-1875)',
-    description: 'Heavy-duty 18-inch rechargeable standing fan engineered for long runtimes during NEPA power outages. Equipped with remote control, 9-speed control, built-in bright LED night light, and 5V USB output port to charge your smartphones.',
+    description: 'Heavy-duty 18-inch rechargeable standing fan engineered for long runtimes during power outages. Equipped with remote control, 9-speed control, built-in bright LED night light, and 5V USB output port to charge your smartphones.',
     price: 60900,
     originalPrice: 75000,
     category: 'Appliances',
     condition: 'Brand New',
     images: [
-      '/assets/images/jumia_electric_standing_fan.jpg'
+      '/assets/images/electric_standing_fan.jpg'
     ],
     stock: 28,
     sku: 'UW-APP-BINATONE-FAN18',
@@ -615,22 +611,21 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: 189,
     featured: true,
-    tags: ['Binatone Fan', '18-Inch Standing', 'Rechargeable Fan', 'Remote Control', 'USB Port', '+5% Fair Price'],
+    tags: ['Binatone Fan', '18-Inch Standing', 'Rechargeable Fan', 'Remote Control', 'USB Port'],
     specs: {
       'Blade Size': '18-Inch Aerodynamic 5-Blade Propeller',
       'Battery': '12V 4.5Ah Heavy-Duty Rechargeable Battery',
       'Runtime': 'Up to 10 Hours on Low Speed / 5 Hours on High',
       'Special Features': 'Full Remote Control, USB Phone Charger, Night Light',
-      'Benchmark': 'Jumia Verified Price (₦58,000 + 5% Margin)',
       'Warranty': '2 Years Binatone Nigeria Warranty'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 21. SILVER CREST 2L 4500W COMMERCIAL BLENDER (Jumia: ₦45,000 -> Ours +5%: ₦47,250)
+  // 21. SILVER CREST 2L 4500W COMMERCIAL BLENDER
   {
-    id: 'prod-jumia-silvercrest-blender',
+    id: 'prod-silvercrest-blender',
     title: 'Silver Crest 2L 4500W Heavy Duty Multi-Function Commercial Crusher Blender & Grinder',
     description: 'Industrial-grade 4500W high-speed commercial blender. Crushes whole dry beans, maize, roasted tigernuts, frozen fruits, and ice cubes effortlessly. 2.0L heavy unbreakable polycarbonate jug with 6 Japanese stainless steel serrated blades.',
     price: 47250,
@@ -647,21 +642,20 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 215,
     featured: true,
-    tags: ['Silver Crest 4500W', 'Commercial Blender', '2L Unbreakable', 'Beans & Ice Crusher', '+5% Fair Price'],
+    tags: ['Silver Crest 4500W', 'Commercial Blender', '2L Unbreakable', 'Beans & Ice Crusher'],
     specs: {
       'Power Rating': '4,500W Pure Copper High-Torque Motor',
       'Capacity': '2.0 Litres Food-Grade Unbreakable Pitcher',
       'Blades': '6-Leaf Hardened Laser-Cut Stainless Steel Blades',
-      'Usage': 'Beans for Akara/Moi-Moi, Smoothies, Tigernut Milk, Ice Crushing',
-      'Benchmark': 'Jumia Benchmark (₦45,000 + 5% Margin)'
+      'Usage': 'Beans for Akara/Moi-Moi, Smoothies, Tigernut Milk, Ice Crushing'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 22. ITEL A70 128GB SMARTPHONE (Jumia: ₦95,000 -> Ours +5%: ₦99,750)
+  // 22. ITEL A70 128GB SMARTPHONE
   {
-    id: 'prod-jumia-itel-a70',
+    id: 'prod-itel-a70',
     title: 'Itel A70 6.6" Dynamic Bar 128GB ROM + 4GB RAM 5000mAh Smartphone (Brilliant Black)',
     description: 'Nigeria’s most popular budget smartphone. Big 6.6-inch HD+ screen with interactive Dynamic Island notification bar, massive 128GB storage, 5000mAh all-day battery with Type-C, octa-core processor, and 13MP AI dual cameras.',
     price: 99750,
@@ -678,22 +672,21 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.8,
     reviewCount: 167,
     featured: true,
-    tags: ['Itel A70', '128GB Storage', '4GB RAM', 'Dynamic Bar', '5000mAh', '+5% Fair Price'],
+    tags: ['Itel A70', '128GB Storage', '4GB RAM', 'Dynamic Bar', '5000mAh'],
     specs: {
       'Display': '6.6-inch HD+ Big Screen with Dynamic Bar',
       'Storage': '128GB Internal Storage (Expandable up to 2TB)',
       'RAM': '4GB RAM + Up to 8GB Extended RAM Memory Fusion',
       'Battery': '5000mAh Long-Lasting Battery with Type-C Port',
-      'Benchmark': 'Jumia Benchmark (₦95,000 + 5% Margin)',
       'Warranty': '1 Year Carlcare Warranty'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 23. NIVEA MEN DEEP 72H ROLL-ON (Pack of 3) (Jumia: ₦4,550 -> Ours +5%: ₦4,780)
+  // 23. NIVEA MEN DEEP 72H ROLL-ON (Pack of 3)
   {
-    id: 'prod-jumia-nivea-deep-rollon',
+    id: 'prod-nivea-deep-rollon',
     title: 'NIVEA MEN Deep Black Charcoal 72H Anti-Perspirant Roll-On 50ml (Pack of 3 Bottles)',
     description: 'Value pack of 3 bottles of NIVEA MEN Deep Anti-perspirant roll-on deodorant. Formulated with Black Carbon charcoal for powerful antibacterial odor protection and 72-hour dry freshness. Non-staining formula.',
     price: 4780,
@@ -710,20 +703,19 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 142,
     featured: false,
-    tags: ['Nivea Men Deep', 'Pack of 3', '72H Roll-On', 'Black Charcoal', '+5% Fair Price'],
+    tags: ['Nivea Men Deep', 'Pack of 3', '72H Roll-On', 'Black Charcoal'],
     specs: {
       'Package': 'Pack of 3 Glass Roll-On Bottles (50ml each)',
       'Formula': 'Black Charcoal Antibacterial Defense',
-      'Protection': '72 Hours Sweat and Odor Resistance',
-      'Benchmark': 'Jumia Benchmark (₦4,550 + 5% Margin)'
+      'Protection': '72 Hours Sweat and Odor Resistance'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 24. GOLDEN PENNY PURE SOYA OIL 5L (Jumia: ₦16,200 -> Ours +5%: ₦17,010)
+  // 24. GOLDEN PENNY PURE SOYA OIL 5L
   {
-    id: 'prod-jumia-golden-penny-oil-5l',
+    id: 'prod-golden-penny-oil-5l',
     title: 'Golden Penny Pure Soya Vegetable Cooking Oil (5 Litres Bottle Jerrycan)',
     description: '100% pure refined soya bean cooking oil in factory-sealed 5L bottle with handle. Cholesterol-free, light, odorless and heart-friendly. Enriched with Vitamin A. Essential for daily frying, baking, and jollof rice.',
     price: 17010,
@@ -740,20 +732,19 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 175,
     featured: true,
-    tags: ['Golden Penny Oil', '5 Litres Jerrycan', 'Pure Soya Oil', 'Supermarket', '+5% Fair Price'],
+    tags: ['Golden Penny Oil', '5 Litres Jerrycan', 'Pure Soya Oil', 'Supermarket'],
     specs: {
       'Volume': '5 Litres Sealed Jerrycan with Pour Spout',
       'Purity': '100% Pure Refined Soya Bean Vegetable Cooking Oil',
-      'Health': 'Zero Cholesterol, Enriched with Vitamin A',
-      'Benchmark': 'Jumia Benchmark (₦16,200 + 5% Margin)'
+      'Health': 'Zero Cholesterol, Enriched with Vitamin A'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 25. NESTLÉ MILO REFILL 800G (Jumia: ₦7,800 -> Ours +5%: ₦8,190)
+  // 25. NESTLÉ MILO REFILL 800G
   {
-    id: 'prod-jumia-milo-refill-800g',
+    id: 'prod-milo-refill-800g',
     title: 'Nestlé Milo Energy Food Drink Chocolate Malt Powder (800g Eco-Refill Pack)',
     description: 'Original Nestlé Milo chocolate malt food drink in 800g economy foil refill pack. Fortified with Activ-Go, essential B vitamins, vitamin C, iron and calcium. Nigeria’s favorite chocolate breakfast drink.',
     price: 8190,
@@ -770,20 +761,19 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: 228,
     featured: false,
-    tags: ['Nestle Milo', '800g Refill', 'Chocolate Malt', 'Activ-Go', '+5% Fair Price'],
+    tags: ['Nestle Milo', '800g Refill', 'Chocolate Malt', 'Activ-Go'],
     specs: {
       'Weight': '800g Moisture-Proof Foil Pouch',
       'Nutrients': 'Activ-Go: Vitamins B2, B3, B6, B12, C, D, Calcium, Iron',
-      'Manufacturer': 'Nestlé Nigeria Plc',
-      'Benchmark': 'Jumia Benchmark (₦7,800 + 5% Margin)'
+      'Manufacturer': 'Nestlé Nigeria Plc'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 
-  // 26. DETTOL ANTISEPTIC LIQUID 1L (Jumia: ₦6,400 -> Ours +5%: ₦6,720)
+  // 26. DETTOL ANTISEPTIC LIQUID 1L
   {
-    id: 'prod-jumia-dettol-antiseptic-1l',
+    id: 'prod-dettol-antiseptic-1l',
     title: 'Dettol Original Anti-Bacterial Disinfectant Liquid for Bathing & Cleansing (1000ml / 1L)',
     description: 'Family-size 1-litre bottle of Dettol Antiseptic Disinfectant Liquid. Kills 99.9% of germs and bacteria. Trusted for personal bathing hygiene, wound first-aid cleaning, laundry disinfection, and household sanitization.',
     price: 6720,
@@ -800,12 +790,11 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: 163,
     featured: false,
-    tags: ['Dettol Liquid', '1000ml / 1L', 'Antiseptic', 'First Aid', '+5% Fair Price'],
+    tags: ['Dettol Liquid', '1000ml / 1L', 'Antiseptic', 'First Aid'],
     specs: {
       'Volume': '1,000ml (1 Litre) Heavy Bottle',
       'Efficacy': 'Kills 99.9% of Harmful Germs and Bacteria',
-      'NAFDAC Reg': 'Official NAFDAC Certified Formulation',
-      'Benchmark': 'Jumia Benchmark (₦6,400 + 5% Margin)'
+      'NAFDAC Reg': 'Official NAFDAC Certified Formulation'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

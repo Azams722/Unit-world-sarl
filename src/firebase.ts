@@ -142,9 +142,13 @@ export async function syncAllProductsToDb(overwriteExisting = true): Promise<Pro
     // Ensure gateway settings are present
     const settingsRef = doc(db, 'settings', 'gateway');
     const defaultSettings: GatewaySettings = {
-      paystackPublicKey: 'pk_test_d347895e69123847291a890472e819b5d2',
-      paystackEnabled: true,
+      paystackPublicKey: '',
+      paystackSecretKey: '',
+      paystackEnabled: false,
       currency: 'NGN',
+      merchantEmail: 'payments@unitworld.com',
+      merchantBusinessName: 'UNITWORLD SARL GLOBAL COMMERCE',
+      webhookUrl: 'https://api.unitworld.com/webhook/paystack',
       bankAccountDetails: {
         bankName: 'Guaranty Trust Bank (GTBank)',
         accountName: 'UNITWORLD SARL GLOBAL COMMERCE',
@@ -189,11 +193,11 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
         }
       });
 
-      // If new Jumia products or updated hair products are missing from DB, trigger sync
+      // If new catalog essentials or hair products are missing from DB, trigger sync
       if (
-        !existingIds.has('prod-jumia-indomie-chicken-carton') ||
-        !existingIds.has('prod-jumia-oraimo-powerbank-30000mah') ||
-        !existingIds.has('prod-jumia-binatone-rechargeable-fan') ||
+        !existingIds.has('prod-indomie-chicken-carton') ||
+        !existingIds.has('prod-oraimo-powerbank-30000mah') ||
+        !existingIds.has('prod-binatone-rechargeable-fan') ||
         !existingIds.has('prod-hair-luxury-5x5-bounce') ||
         !existingIds.has('prod-hair-sdd-celebrity-fringe')
       ) {
@@ -653,9 +657,13 @@ export async function getGatewaySettings(): Promise<GatewaySettings> {
     console.warn('Settings read note:', e);
   }
   return {
-    paystackPublicKey: 'pk_test_d347895e69123847291a890472e819b5d2',
-    paystackEnabled: true,
+    paystackPublicKey: '',
+    paystackSecretKey: '',
+    paystackEnabled: false,
     currency: 'NGN',
+    merchantEmail: 'payments@unitworld.com',
+    merchantBusinessName: 'UNITWORLD SARL GLOBAL COMMERCE',
+    webhookUrl: 'https://api.unitworld.com/webhook/paystack',
     bankAccountDetails: {
       bankName: 'Guaranty Trust Bank (GTBank)',
       accountName: 'UNITWORLD SARL GLOBAL COMMERCE',

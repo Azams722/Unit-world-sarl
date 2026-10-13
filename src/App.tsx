@@ -68,9 +68,13 @@ export default function App() {
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [gatewaySettings, setGatewaySettings] = useState<GatewaySettings>({
-    paystackPublicKey: 'pk_test_d347895e69123847291a890472e819b5d2',
-    paystackEnabled: true,
+    paystackPublicKey: '',
+    paystackSecretKey: '',
+    paystackEnabled: false,
     currency: 'NGN',
+    merchantEmail: 'payments@unitworld.com',
+    merchantBusinessName: 'UNITWORLD SARL GLOBAL COMMERCE',
+    webhookUrl: 'https://api.unitworld.com/webhook/paystack',
     bankAccountDetails: {
       bankName: 'Guaranty Trust Bank (GTBank)',
       accountName: 'UNITWORLD SARL GLOBAL COMMERCE',
@@ -498,11 +502,11 @@ export default function App() {
   const fashionProducts = products.filter((p) => p.category === 'Fashion');
   const groceryProducts = products.filter((p) => p.category === 'Supermarket & Raw Foods');
   const techProducts = products.filter((p) => p.category === 'Phones & Tablets' || p.category === 'Electronics');
-  const jumiaEverydayProducts = products.filter((p) => p.id.startsWith('prod-jumia-'));
+  const everydayProducts = products.filter((p) => p.category === 'Appliances' || p.tags?.includes('Household') || p.id.startsWith('prod-indomie-') || p.id.startsWith('prod-oraimo-') || p.id.startsWith('prod-itel-') || p.id.startsWith('prod-nivea-') || p.id.startsWith('prod-golden-') || p.id.startsWith('prod-milo-') || p.id.startsWith('prod-dettol-') || p.id.startsWith('prod-silvercrest-') || p.id.startsWith('prod-binatone-'));
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900 pb-16 md:pb-0">
-      {/* 1. Jumia-Style Header */}
+      {/* 1. Header */}
       <Header
         brandLogoUrl={brandSettings.logoUrl}
         cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)}
@@ -545,7 +549,7 @@ export default function App() {
         />
       ) : (
         <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6 sm:space-y-8">
-        {/* HERO SHOWCASE / JUMIA CAMPAIGN BANNER (Only on Homepage & All Departments) */}
+        {/* HERO SHOWCASE / CAMPAIGN BANNER (Only on Homepage & All Departments) */}
         {selectedCategory === 'All Departments' && !searchQuery && (
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Left Category Quick Navigation (Desktop) */}
@@ -570,7 +574,7 @@ export default function App() {
             {/* Central Campaign Hero Banner */}
             <div className="lg:col-span-6 relative rounded-2xl overflow-hidden min-h-[300px] sm:min-h-[360px] bg-slate-900 border border-slate-800 shadow-md flex flex-col justify-end p-6 sm:p-8">
               <img
-                src="/assets/images/hero_marketplace_jumia_1790462828695.jpg"
+                src="/assets/images/hero_marketplace_banner.jpg"
                 alt="Unitworld Global Marketplace"
                 referrerPolicy="no-referrer"
                 className="absolute inset-0 w-full h-full object-cover opacity-60"
@@ -585,7 +589,7 @@ export default function App() {
                   Luxury Vehicles, Fashion Wear, Tech & Farm Produce
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
-                  Verified Tokunbo & Registered cars with physical Lagos inspection, all designer sets flat ₦25,000, and integrated Paystack settlement.
+                  Verified Tokunbo & Registered cars with physical Lagos inspection, all designer sets flat ₦25,000, and escrow purchase protection.
                 </p>
 
                 <div className="pt-2 flex flex-wrap gap-2.5">
@@ -614,7 +618,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right Mini Cards (Jumia Side Spotlights) */}
+            {/* Right Mini Cards (Spotlight Cards) */}
             <div className="lg:col-span-3 flex flex-col gap-4">
               {/* Card 1: 2025 Land Cruiser spotlight */}
               <div 
@@ -710,10 +714,10 @@ export default function App() {
           </section>
         )}
 
-        {/* 3B. SHOWCASE SECTION: EVERYDAY BESTSELLERS & ESSENTIALS (JUMIA BENCHMARK + 5% FAIR VALUE) */}
-        {selectedCategory === 'All Departments' && !searchQuery && jumiaEverydayProducts.length > 0 && (
-          <section className="bg-white rounded-2xl border border-amber-200/80 p-4 sm:p-6 shadow-2xs space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-amber-100">
+        {/* 3B. SHOWCASE SECTION: EVERYDAY ESSENTIALS & HOME APPLIANCES */}
+        {selectedCategory === 'All Departments' && !searchQuery && everydayProducts.length > 0 && (
+          <section className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-2xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-xs">
                   <Flame className="w-5 h-5 fill-current" />
@@ -721,26 +725,26 @@ export default function App() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="font-playfair text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                      Everyday Bestsellers & Appliances
+                      Everyday Essentials & Home Appliances
                     </h2>
                     <span className="bg-amber-100 text-amber-900 text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider">
-                      Jumia Top Sellers (+5% Fair Margin)
+                      Popular In Demand
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Authentic real-life Nigerian household favorites: Indomie cartons, Oraimo 30000mAh, Binatone 18" fan, Silver Crest 4500W blender, Itel A70, Nivea roll-ons, and pantry staples.
+                    Authentic Nigerian household favorites: Indomie cartons, high-capacity power banks, rechargeable standing fans, commercial heavy-duty blenders, smartphones, and pantry provisions.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-600">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Verified Direct Stock ({jumiaEverydayProducts.length} items)</span>
+                <span>Verified Direct Stock ({everydayProducts.length} items)</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
-              {jumiaEverydayProducts.slice(0, 6).map((item) => (
+              {everydayProducts.slice(0, 6).map((item) => (
                 <ProductCard
                   key={item.id}
                   product={item}
@@ -751,10 +755,10 @@ export default function App() {
               ))}
             </div>
 
-            {jumiaEverydayProducts.length > 6 && (
+            {everydayProducts.length > 6 && (
               <div className="pt-2 border-t border-slate-100">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
-                  {jumiaEverydayProducts.slice(6).map((item) => (
+                  {everydayProducts.slice(6).map((item) => (
                     <ProductCard
                       key={item.id}
                       product={item}

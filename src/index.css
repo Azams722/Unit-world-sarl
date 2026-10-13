@@ -25,9 +25,9 @@
   font-family: 'Playfair Display', Georgia, Cambria, serif !important;
 }
 
-/* Authentic Nigerian Marketplace Utilities */
-.jumia-badge {
-  background-color: #f68b1e;
+/* Authentic Marketplace Utilities */
+.featured-badge {
+  background-color: #f59e0b;
   color: #ffffff;
   font-weight: 700;
   text-transform: uppercase;

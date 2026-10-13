@@ -160,7 +160,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
             <div className="flex items-center gap-2 text-[11px] text-slate-500 bg-emerald-50 text-emerald-800 p-2 rounded-lg border border-emerald-200">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Secured by Paystack 256-bit Bank Grade Encryption</span>
+              <span>Unitworld Verified Escrow & Secure Checkout</span>
             </div>
 
             <button

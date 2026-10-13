@@ -132,8 +132,12 @@ export interface AppNotification {
 
 export interface GatewaySettings {
   paystackPublicKey: string;
+  paystackSecretKey?: string;
   paystackEnabled: boolean;
   currency: string;
+  merchantEmail?: string;
+  merchantBusinessName?: string;
+  webhookUrl?: string;
   bankAccountDetails: {
     bankName: string;
     accountName: string;

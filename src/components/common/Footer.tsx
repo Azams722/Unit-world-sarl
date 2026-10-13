@@ -103,14 +103,12 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin }) => {
               Payment & Security
             </h4>
             <p className="text-xs text-slate-400 mb-3 leading-relaxed">
-              We process secure card and direct transfer transactions via Paystack and GTBank Escrow settlements.
+              Online checkout gateway coming soon. Currently accepting direct verified transfers & doorstep verification.
             </p>
             <div className="flex flex-wrap gap-2 text-[10px] font-bold font-mono">
-              <span className="bg-slate-800 text-sky-400 px-2 py-1 rounded border border-slate-700">PAYSTACK</span>
-              <span className="bg-slate-800 text-slate-200 px-2 py-1 rounded border border-slate-700">MASTERCARD</span>
-              <span className="bg-slate-800 text-slate-200 px-2 py-1 rounded border border-slate-700">VISA</span>
-              <span className="bg-slate-800 text-slate-200 px-2 py-1 rounded border border-slate-700">VERVE</span>
-              <span className="bg-slate-800 text-amber-400 px-2 py-1 rounded border border-slate-700">GTBANK WIRE</span>
+              <span className="bg-slate-800 text-amber-400 px-2 py-1 rounded border border-slate-700">ONLINE GATEWAY (COMING SOON)</span>
+              <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">BANK TRANSFER</span>
+              <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">ESCROW VERIFIED</span>
             </div>
           </div>
         </div>

@@ -422,7 +422,7 @@ Please provide ordering, inspection and delivery confirmation.`
 
                 <div className="text-right">
                   <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black px-2.5 py-1 rounded uppercase">
-                    Paystack Secured
+                    Escrow Protected
                   </span>
                 </div>
               </div>
@@ -493,7 +493,7 @@ Please provide ordering, inspection and delivery confirmation.`
                   disabled={isOutOfStock}
                   className="flex-1 py-3.5 px-5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 text-slate-950 rounded-xl text-sm font-black transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
-                  <span>Instant Paystack Buy</span>
+                  <span>Direct Order</span>
                 </button>
               </div>
 
@@ -514,7 +514,7 @@ Please provide ordering, inspection and delivery confirmation.`
                 </div>
                 <div className="p-2 bg-slate-50 rounded-lg flex flex-col items-center">
                   <Lock className="w-4 h-4 text-sky-600 mb-1" />
-                  <span>Paystack Escrow</span>
+                  <span>Secure Escrow</span>
                 </div>
                 <div className="p-2 bg-slate-50 rounded-lg flex flex-col items-center">
                   <Truck className="w-4 h-4 text-amber-600 mb-1" />

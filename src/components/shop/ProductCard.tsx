@@ -116,17 +116,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
 
-        {/* Condition / Settlement / Jumia Tag (Only if NOT omitted) */}
+        {/* Condition / Settlement Tag (Only if NOT omitted) */}
         <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 items-start z-10">
-          {product.id.startsWith('prod-jumia-') ? (
-            <span className="bg-amber-400 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs uppercase tracking-wide">
-              Jumia +5%
-            </span>
-          ) : product.condition && !isFieldOmitted('condition') ? (
+          {product.condition && !isFieldOmitted('condition') && (
             <span className="bg-slate-900/85 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-xs uppercase tracking-wide">
               {product.condition}
             </span>
-          ) : null}
+          )}
           {product.settlementFee && !isFieldOmitted('settlementFee') && (
             <span className="bg-amber-500 text-slate-950 text-[10px] font-extrabold px-1.5 py-0.5 rounded shadow-xs">
               Settlement {product.settlementFee}

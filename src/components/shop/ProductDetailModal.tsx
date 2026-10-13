@@ -78,7 +78,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   if (mediaList.length === 0) {
     mediaList.push({
-      url: '/assets/images/hero_marketplace_jumia_1790462828695.jpg',
+      url: '/assets/images/hero_marketplace_banner.jpg',
       isVideo: false,
     });
   }

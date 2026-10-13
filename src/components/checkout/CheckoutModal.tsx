@@ -10,7 +10,8 @@ import {
   Loader2, 
   Lock, 
   ChevronRight,
-  Truck
+  Truck,
+  Clock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { OrderItem, Order, UserProfile, PaymentMethod, GatewaySettings } from '../../types';
@@ -36,7 +37,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onOrderCompleted,
   onOpenAuth,
 }) => {
-  const [step, setStep] = useState<'details' | 'payment' | 'paystack_sim' | 'success'>('details');
+  const [step, setStep] = useState<'details' | 'payment' | 'success'>('details');
   const [deliveryMethod, setDeliveryMethod] = useState<'door_delivery' | 'pickup_station'>('door_delivery');
   const [fullName, setFullName] = useState(currentUser?.displayName || '');
   const [email, setEmail] = useState(currentUser?.email || '');
@@ -45,15 +46,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [city, setCity] = useState(currentUser?.addresses?.[0]?.city || 'Lagos');
   const [state, setState] = useState(currentUser?.addresses?.[0]?.state || 'Lagos State');
   
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('paystack');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('bank_transfer');
   const [isProcessing, setIsProcessing] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
-
-  // Paystack interactive simulation state
-  const [paystackCardNumber, setPaystackCardNumber] = useState('4084 0834 1120 4920');
-  const [paystackCardExpiry, setPaystackCardExpiry] = useState('08/28');
-  const [paystackCardCvv, setPaystackCardCvv] = useState('583');
-  const [paystackCardPin, setPaystackCardPin] = useState('1234');
 
   if (!isOpen) return null;
 
@@ -311,39 +306,28 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </h3>
 
             <div className="space-y-3">
-              {/* Option 1: Paystack */}
-              <label 
-                className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
-                  paymentMethod === 'paystack'
-                    ? 'border-[#0284C7] bg-sky-50/50 shadow-xs'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
+              {/* Option 1: Online Card Gateway (Coming Soon for Compliance Review) */}
+              <div 
+                className="flex items-start gap-3 p-3.5 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 opacity-80"
               >
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={paymentMethod === 'paystack'}
-                  onChange={() => setPaymentMethod('paystack')}
-                  className="mt-1 text-sky-600 focus:ring-sky-500"
-                />
+                <div className="mt-1 flex items-center justify-center w-4 h-4 rounded-full border border-slate-300 text-slate-400">
+                  <Clock className="w-2.5 h-2.5" />
+                </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-[#0284C7]" />
-                      Paystack Secure Gateway
+                    <span className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-slate-500" />
+                      Online Card & Instant Payment
                     </span>
-                    <span className="text-[10px] font-extrabold bg-[#00C3F7]/20 text-[#0089AF] px-2 py-0.5 rounded">
-                      RECOMMENDED
+                    <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-0.5 rounded tracking-wider border border-amber-200">
+                      COMING SOON
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-600 mt-1">
-                    Pay securely using Debit/Credit Card (Mastercard, Visa, Verve), Bank Transfer, or USSD via Paystack.
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-1 font-mono">
-                    Gateway Key: {gatewaySettings.paystackPublicKey ? `${gatewaySettings.paystackPublicKey.substring(0, 14)}...` : 'Configured'}
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Debit/Credit card processing is currently undergoing regulatory & merchant onboarding review. Coming soon!
                   </p>
                 </div>
-              </label>
+              </div>
 
               {/* Option 2: Direct Bank Settlement / Escrow Wire */}
               <label 
@@ -396,7 +380,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <div className="flex-1">
                   <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
                     <Banknote className="w-4 h-4 text-amber-600" />
-                    Pay on Delivery (Jumia COD Standard)
+                    Pay on Delivery (Doorstep Cash / POS)
                   </span>
                   <p className="text-[11px] text-slate-600 mt-1">
                     Pay with Cash or POS upon physical inspection at delivery. (Available for eligible items).
@@ -437,11 +421,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (paymentMethod === 'paystack') {
-                    setStep('paystack_sim');
-                  } else {
-                    handleFinalizeOrder();
-                  }
+                  handleFinalizeOrder();
                 }}
                 disabled={isProcessing}
                 className="flex-1 py-3 px-4 bg-[#0284C7] hover:bg-[#0369a1] text-white rounded-xl text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
@@ -449,12 +429,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Processing Transaction...</span>
+                    <span>Processing Order...</span>
                   </>
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
-                    <span>Pay {formatCurrency(grandTotal)} Now</span>
+                    <span>Confirm Order ({formatCurrency(grandTotal)})</span>
                   </>
                 )}
               </button>
@@ -462,108 +442,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </div>
         )}
 
-        {/* Step 3: Interactive Paystack Modal Bridge */}
-        {step === 'paystack_sim' && (
-          <div className="p-5 sm:p-6 space-y-4">
-            <div className="p-3 bg-sky-900 text-white rounded-xl flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-sky-300 font-mono">PAYSTACK POPUP SECURE CHECKOUT</p>
-                <p className="text-xs font-bold">{fullName} · {email}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-sky-300 font-mono">AMOUNT DUE</p>
-                <p className="text-base font-black text-amber-400 tabular-nums">{formatCurrency(grandTotal)}</p>
-              </div>
-            </div>
 
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <CreditCard className="w-4 h-4 text-sky-600" />
-                  Card Payment Simulation
-                </span>
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
-                  256-Bit SSL
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Card Number</label>
-                <input
-                  type="text"
-                  value={paystackCardNumber}
-                  onChange={(e) => setPaystackCardNumber(e.target.value)}
-                  className="w-full py-2 px-3 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:border-sky-500 bg-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Valid Thru</label>
-                  <input
-                    type="text"
-                    value={paystackCardExpiry}
-                    onChange={(e) => setPaystackCardExpiry(e.target.value)}
-                    className="w-full py-2 px-3 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:border-sky-500 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">CVV</label>
-                  <input
-                    type="password"
-                    maxLength={4}
-                    value={paystackCardCvv}
-                    onChange={(e) => setPaystackCardCvv(e.target.value)}
-                    className="w-full py-2 px-3 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:border-sky-500 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Card PIN</label>
-                  <input
-                    type="password"
-                    maxLength={4}
-                    value={paystackCardPin}
-                    onChange={(e) => setPaystackCardPin(e.target.value)}
-                    className="w-full py-2 px-3 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:border-sky-500 bg-white"
-                  />
-                </div>
-              </div>
-
-              <p className="text-[10px] text-slate-500 italic">
-                * You can test with these demo values or input your card. Click below to verify and complete transaction.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setStep('payment')}
-                className="py-2.5 px-4 border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleFinalizeOrder(generatePaystackReference())}
-                disabled={isProcessing}
-                className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-md cursor-pointer"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Verifying with Paystack...</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Authorize Paystack Payment ({formatCurrency(grandTotal)})</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Step 4: Order Completed Successfully */}
         {step === 'success' && createdOrder && (

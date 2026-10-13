@@ -40,7 +40,10 @@ import {
   Mail,
   Phone,
   ExternalLink,
-  Film
+  Film,
+  CreditCard,
+  Lock,
+  Building2
 } from 'lucide-react';
 import { Product, Order, GatewaySettings, BrandSettings, OrderStatus, AdminUser, UserProfile } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -57,10 +60,10 @@ const PRESET_IMAGE_ASSETS = [
   { label: '2017 Highlander Limited Luxury', url: '/assets/images/car_highlander_limited_1790462852222.jpg' },
   { label: '2017 Lexus RX350 Luxury', url: '/assets/images/car_lexus_rx350_1790462861358.jpg' },
   { label: '2010 Toyota Camry Toks', url: '/assets/images/car_camry_2010_1790462872857.jpg' },
-  { label: 'Indomie Chicken Flavor Carton', url: '/assets/images/jumia_indomie_chicken_carton.jpg' },
-  { label: 'Oraimo 30000mAh Power Bank', url: '/assets/images/jumia_oraimo_powerbank_30000mah.jpg' },
-  { label: 'Oraimo Watch 5 Lite Smartwatch', url: '/assets/images/jumia_oraimo_smartwatch.jpg' },
-  { label: 'Binatone 18" Standing Fan', url: '/assets/images/jumia_electric_standing_fan.jpg' },
+  { label: 'Indomie Chicken Flavor Carton', url: '/assets/images/indomie_chicken_carton.jpg' },
+  { label: 'Oraimo 30000mAh Power Bank', url: '/assets/images/oraimo_powerbank_30000mah.jpg' },
+  { label: 'Oraimo Watch 5 Lite Smartwatch', url: '/assets/images/oraimo_smartwatch.jpg' },
+  { label: 'Binatone 18" Standing Fan', url: '/assets/images/electric_standing_fan.jpg' },
   { label: 'Silver Crest 4500W Blender', url: 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?auto=format&fit=crop&w=800&q=80' },
   { label: 'Itel A70 128GB Smartphone', url: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=800&q=80' },
   { label: 'Nivea Men 72H Roll-On 3-Pack', url: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80' },
@@ -193,12 +196,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [newAdminDept, setNewAdminDept] = useState('Inventory & Catalog');
   const [adminSaving, setAdminSaving] = useState(false);
 
-  // Gateway Settings
-  const [paystackKey, setPaystackKey] = useState(gatewaySettings.paystackPublicKey);
-  const [paystackActive, setPaystackActive] = useState(gatewaySettings.paystackEnabled);
-  const [bankName, setBankName] = useState(gatewaySettings.bankAccountDetails.bankName);
-  const [accountName, setAccountName] = useState(gatewaySettings.bankAccountDetails.accountName);
-  const [accountNumber, setAccountNumber] = useState(gatewaySettings.bankAccountDetails.accountNumber);
+  // Gateway Settings (Backend Paystack Setup Section)
+  const [paystackKey, setPaystackKey] = useState(gatewaySettings.paystackPublicKey || '');
+  const [paystackSecretKey, setPaystackSecretKey] = useState(gatewaySettings.paystackSecretKey || '');
+  const [paystackActive, setPaystackActive] = useState(gatewaySettings.paystackEnabled || false);
+  const [merchantEmail, setMerchantEmail] = useState(gatewaySettings.merchantEmail || 'payments@unitworld.com');
+  const [merchantBusinessName, setMerchantBusinessName] = useState(gatewaySettings.merchantBusinessName || 'UNITWORLD SARL GLOBAL COMMERCE');
+  const [webhookUrl, setWebhookUrl] = useState(gatewaySettings.webhookUrl || 'https://api.unitworld.com/webhook/paystack');
+  const [showSecretKey, setShowSecretKey] = useState(false);
+  const [bankName, setBankName] = useState(gatewaySettings.bankAccountDetails?.bankName || 'Guaranty Trust Bank (GTBank)');
+  const [accountName, setAccountName] = useState(gatewaySettings.bankAccountDetails?.accountName || 'UNITWORLD SARL GLOBAL COMMERCE');
+  const [accountNumber, setAccountNumber] = useState(gatewaySettings.bankAccountDetails?.accountNumber || '0284729104');
 
   // Brand Settings
   const [brandLogoUrl, setBrandLogoUrl] = useState(brandSettings.logoUrl || DEFAULT_BRAND_LOGO);
@@ -549,7 +557,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
     const finalImages = formImages.length > 0 
       ? formImages 
-      : ['/assets/images/hero_marketplace_jumia_1790462828695.jpg'];
+      : ['/assets/images/hero_marketplace_banner.jpg'];
 
     const omittedArray = Array.from(omittedFields);
 
@@ -597,9 +605,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     const updated: GatewaySettings = {
-      paystackPublicKey: paystackKey,
+      paystackPublicKey: paystackKey.trim(),
+      paystackSecretKey: paystackSecretKey.trim(),
       paystackEnabled: paystackActive,
       currency: 'NGN',
+      merchantEmail: merchantEmail.trim(),
+      merchantBusinessName: merchantBusinessName.trim(),
+      webhookUrl: webhookUrl.trim(),
       bankAccountDetails: {
         bankName,
         accountName,
@@ -607,7 +619,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       }
     };
     await onSaveGatewaySettings(updated);
-    setSyncSuccessMsg('Paystack Gateway & Escrow Settings updated in Firestore!');
+    setSyncSuccessMsg('Paystack Merchant Setup & Escrow Bank Settings saved to Firestore database!');
     setTimeout(() => setSyncSuccessMsg(''), 5000);
   };
 
@@ -1600,7 +1612,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                   alt={`Gallery photo ${idx + 1}`}
                                   className="w-full h-full object-cover"
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src = '/assets/images/hero_marketplace_jumia_1790462828695.jpg';
+                                    (e.target as HTMLImageElement).src = '/assets/images/hero_marketplace_banner.jpg';
                                   }}
                                 />
                                 {idx === 0 ? (
@@ -1951,7 +1963,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               <td className="p-3">
                                 <div className="flex items-center gap-3">
                                   <img
-                                    src={p.images?.[0] || '/assets/images/hero_marketplace_jumia_1790462828695.jpg'}
+                                    src={p.images?.[0] || '/assets/images/hero_marketplace_banner.jpg'}
                                     alt={p.title}
                                     className="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0"
                                   />
@@ -2768,75 +2780,207 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 </form>
               </div>
 
-              {/* Paystack Gateway Form */}
-              <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-[#0284C7]" />
-                    <span>Paystack & Direct Escrow Bank Configuration</span>
-                  </h3>
-                </div>
-
-                <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Paystack Public Key</label>
-                      <input
-                        type="text"
-                        value={paystackKey}
-                        onChange={(e) => setPaystackKey(e.target.value)}
-                        className="w-full p-2.5 border border-slate-300 rounded-lg font-mono"
-                      />
+              {/* Paystack Merchant Setup & Escrow Bank Configuration */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-sky-50 text-[#0284C7] flex items-center justify-center border border-sky-200">
+                      <CreditCard className="w-5 h-5" />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Gateway Status</label>
-                      <select
-                        value={paystackActive ? 'enabled' : 'disabled'}
-                        onChange={(e) => setPaystackActive(e.target.value === 'enabled')}
-                        className="w-full p-2.5 border border-slate-300 rounded-lg font-bold"
-                      >
-                        <option value="enabled">Enabled (Live Paystack)</option>
-                        <option value="disabled">Disabled (Test / Bank Transfer Only)</option>
-                      </select>
+                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                        <span>Paystack Merchant Gateway Setup</span>
+                        <span className="text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded uppercase">
+                          Backend Only
+                        </span>
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Configure your official Paystack API credentials, merchant profile, and webhook settings.
+                      </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Bank Name</label>
-                      <input
-                        type="text"
-                        value={bankName}
-                        onChange={(e) => setBankName(e.target.value)}
-                        className="w-full p-2 border border-slate-300 rounded-lg"
-                      />
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold text-slate-600">Frontend Status:</span>
+                    <span className="text-[11px] font-black bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full border border-amber-300">
+                      Coming Soon (Hidden from public review)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Compliance & Review Notice Banner */}
+                <div className="p-4 bg-sky-50 rounded-xl border border-sky-200 flex items-start gap-3 text-xs text-sky-950">
+                  <ShieldCheck className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-bold text-sky-900">
+                      Paystack Onboarding & Compliance Safety Notice
+                    </p>
+                    <p className="text-[11px] text-sky-800 leading-relaxed">
+                      To ensure seamless approval during Paystack's website compliance review, public checkout displays <strong>"Online Card & Instant Payment (Coming Soon)"</strong> so reviewers will not encounter non-live test keys or unapproved checkouts. Once your live account is activated by Paystack, enter your Live API Keys below and toggle Gateway Status to <strong>"Enabled (Live Paystack)"</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveSettings} className="space-y-5 text-xs">
+                  {/* Section A: API Keys */}
+                  <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-slate-500" />
+                      1. Paystack API Credentials
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Paystack Public Key (Live / Test)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="pk_live_... or pk_test_..."
+                          value={paystackKey}
+                          onChange={(e) => setPaystackKey(e.target.value)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg font-mono text-slate-900 bg-white focus:outline-none focus:border-sky-500"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Obtained from Paystack Dashboard → Settings → API Keys & Webhooks.
+                        </p>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block font-semibold text-slate-700">
+                            Paystack Secret Key (Optional Server/Webhook)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setShowSecretKey(!showSecretKey)}
+                            className="text-[10px] text-sky-600 hover:text-sky-800 font-bold cursor-pointer"
+                          >
+                            {showSecretKey ? 'Hide' : 'Show'}
+                          </button>
+                        </div>
+                        <input
+                          type={showSecretKey ? 'text' : 'password'}
+                          placeholder="sk_live_... or sk_test_..."
+                          value={paystackSecretKey}
+                          onChange={(e) => setPaystackSecretKey(e.target.value)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg font-mono text-slate-900 bg-white focus:outline-none focus:border-sky-500"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Never shared on client-side; securely stored in Firestore settings.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Account Name</label>
-                      <input
-                        type="text"
-                        value={accountName}
-                        onChange={(e) => setAccountName(e.target.value)}
-                        className="w-full p-2 border border-slate-300 rounded-lg"
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Gateway Activation State
+                        </label>
+                        <select
+                          value={paystackActive ? 'enabled' : 'disabled'}
+                          onChange={(e) => setPaystackActive(e.target.value === 'enabled')}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg font-bold bg-white"
+                        >
+                          <option value="disabled">Disabled (Safe Mode for Review — "Coming Soon" on frontend)</option>
+                          <option value="enabled">Enabled (Live Paystack Gateway)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Webhook Notification URL
+                        </label>
+                        <input
+                          type="text"
+                          value={webhookUrl}
+                          onChange={(e) => setWebhookUrl(e.target.value)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg font-mono text-slate-900 bg-white"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Paste this URL into your Paystack Dashboard Webhook settings.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Account Number</label>
-                      <input
-                        type="text"
-                        value={accountNumber}
-                        onChange={(e) => setAccountNumber(e.target.value)}
-                        className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold"
-                      />
+                  </div>
+
+                  {/* Section B: Merchant Business Profile */}
+                  <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                      2. Registered Business Identity
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Merchant / Corporate Business Name
+                        </label>
+                        <input
+                          type="text"
+                          value={merchantBusinessName}
+                          onChange={(e) => setMerchantBusinessName(e.target.value)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Official Settlement Notification Email
+                        </label>
+                        <input
+                          type="email"
+                          value={merchantEmail}
+                          onChange={(e) => setMerchantEmail(e.target.value)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section C: Escrow Settlement Bank Details */}
+                  <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+                      3. Direct Wire & Escrow Settlement Account
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Bank Name</label>
+                        <input
+                          type="text"
+                          value={bankName}
+                          onChange={(e) => setBankName(e.target.value)}
+                          className="w-full p-2 border border-slate-300 rounded-lg bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Account Name</label>
+                        <input
+                          type="text"
+                          value={accountName}
+                          onChange={(e) => setAccountName(e.target.value)}
+                          className="w-full p-2 border border-slate-300 rounded-lg bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Account Number</label>
+                        <input
+                          type="text"
+                          value={accountNumber}
+                          onChange={(e) => setAccountNumber(e.target.value)}
+                          className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold bg-white"
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-[#0284C7] hover:bg-[#0369a1] text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm text-sm"
+                    className="w-full py-3.5 bg-[#0284C7] hover:bg-[#0369a1] text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm text-sm"
                   >
                     <Save className="w-4 h-4" />
-                    <span>Save Paystack & Escrow Settings to Firebase</span>
+                    <span>Save Paystack Setup & Escrow Bank Settings to Firebase</span>
                   </button>
                 </form>
               </div>

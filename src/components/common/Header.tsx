@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs">
-      {/* Top Utility Bar (Jumia Style) */}
+      {/* Top Utility Bar */}
       <div className="bg-slate-900 text-slate-300 text-xs py-1.5 px-4 hidden md:block">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
@@ -124,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({
             </a>
           </div>
 
-          {/* Search Bar (Jumia Center Style) */}
+          {/* Search Bar */}
           <div className="hidden md:flex flex-1 max-w-2xl items-center relative">
             <div className="flex w-full items-center rounded-lg border-2 border-[#0284C7] focus-within:border-sky-500 overflow-hidden bg-white shadow-2xs">
               <div className="pl-3 text-slate-400">
@@ -320,7 +320,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Category Navigation Bar (Desktop Jumia Department Strip) */}
+      {/* Category Navigation Bar (Desktop Department Strip) */}
       <div className="border-t border-slate-100 bg-slate-50 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 flex items-center overflow-x-auto scrollbar-none py-1.5 gap-1">
           {CATEGORIES.map((cat) => {
