@@ -59,6 +59,7 @@ import { OrderTrackingModal } from './components/orders/OrderTrackingModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { CustomerDashboard } from './components/customer/CustomerDashboard';
 import { AdminPortal } from './components/admin/AdminPortal';
+import { RefundPolicyModal } from './components/common/RefundPolicyModal';
 import { formatCurrency, generateProductSlug } from './utils/formatters';
 import { CATEGORIES, INITIAL_PRODUCTS } from './data/initialProducts';
 
@@ -72,9 +73,9 @@ export default function App() {
     paystackSecretKey: '',
     paystackEnabled: false,
     currency: 'NGN',
-    merchantEmail: 'payments@unitworld.com',
+    merchantEmail: 'payments@unit-world-sarl.com',
     merchantBusinessName: 'UNITWORLD SARL GLOBAL COMMERCE',
-    webhookUrl: 'https://api.unitworld.com/webhook/paystack',
+    webhookUrl: 'https://api.unit-world-sarl.com/webhook/paystack',
     bankAccountDetails: {
       bankName: 'Guaranty Trust Bank (GTBank)',
       accountName: 'UNITWORLD SARL GLOBAL COMMERCE',
@@ -99,6 +100,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isRefundPolicyOpen, setIsRefundPolicyOpen] = useState(false);
   const [admins, setAdmins] = useState<AdminUser[]>(DEFAULT_ADMINS);
   const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
 
@@ -175,6 +177,19 @@ export default function App() {
     }
   };
 
+  const openRefundPolicyModal = () => {
+    setIsRefundPolicyOpen(true);
+    navigateTo('/refund-policy');
+  };
+
+  const closeRefundPolicyModal = () => {
+    setIsRefundPolicyOpen(false);
+    const path = window.location.pathname.toLowerCase();
+    if (path === '/refund-policy' || path === '/refund-and-cancellation-policy' || path === '/returns') {
+      navigateTo('/');
+    }
+  };
+
   const productsRef = useRef<Product[]>(products);
   useEffect(() => {
     productsRef.current = products;
@@ -216,6 +231,8 @@ export default function App() {
         setIsCartOpen(true);
       } else if (path === '/checkout') {
         setIsCheckoutOpen(true);
+      } else if (path === '/refund-policy' || path === '/refund-and-cancellation-policy' || path === '/returns') {
+        setIsRefundPolicyOpen(true);
       }
     };
 
@@ -322,35 +339,47 @@ export default function App() {
       console.warn('Real-time orders snapshot notice:', err);
     });
 
-    // Auth state listener
+    // Auth state listener: strictly restricted to tobi@acourze.com
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        if (user.email?.toLowerCase() !== 'tobi@acourze.com') {
+          auth.signOut().catch(() => {});
+          setCurrentUser(null);
+          return;
+        }
         const profile = await getUserProfile(user.uid);
         if (profile) {
           setCurrentUser(profile);
-          setUsers((prev) => {
-            const exists = prev.some((u) => u.uid === profile.uid);
-            return exists ? prev.map((u) => (u.uid === profile.uid ? profile : u)) : [profile, ...prev];
-          });
+          setUsers([profile]);
         } else {
-          const newProfile: UserProfile = {
+          const adminProfile: UserProfile = {
             uid: user.uid,
-            email: user.email || 'customer@unitworld.com',
-            displayName: user.displayName || user.email?.split('@')[0] || 'Customer',
-            role: user.email === 'tobi@acourze.com' ? 'admin' : 'customer',
-            mfaEnabled: user.email === 'tobi@acourze.com',
+            email: 'tobi@acourze.com',
+            displayName: user.displayName || 'Tobi',
+            role: 'admin',
+            mfaEnabled: true,
             preferences: {
               currency: 'NGN',
               emailNotifications: true,
               smsNotifications: true,
               whatsappAlerts: true,
             },
-            addresses: [],
-            createdAt: new Date().toISOString(),
+            addresses: [
+              {
+                id: 'addr-1',
+                fullName: 'Tobi',
+                phone: '+234 800 8648 967',
+                street: '14B Admiralty Way, Lekki Phase 1',
+                city: 'Lagos',
+                state: 'Lagos State',
+                isDefault: true
+              }
+            ],
+            createdAt: '2025-01-10T08:30:00.000Z',
           };
-          setCurrentUser(newProfile);
-          saveUserProfile(newProfile);
-          setUsers((prev) => [newProfile, ...prev.filter((u) => u.uid !== newProfile.uid)]);
+          setCurrentUser(adminProfile);
+          saveUserProfile(adminProfile);
+          setUsers([adminProfile]);
         }
       }
     });
@@ -467,7 +496,7 @@ export default function App() {
       selectedCategory === 'All Departments' ||
       p.category.toLowerCase() === selectedCategory.toLowerCase() ||
       (selectedCategory === 'Hair & Luxury Wigs' && (p.category === 'Hair & Luxury Wigs' || (p.tags && p.tags.includes('Human Hair Wig')))) ||
-      (selectedCategory === 'Health & Beauty' && (p.category === 'Hair & Luxury Wigs' || p.category === 'Health & Beauty'));
+      (selectedCategory === 'Beauty & Personal Care' && (p.category === 'Hair & Luxury Wigs' || p.category === 'Beauty & Personal Care'));
 
     const matchesSearch =
       !searchQuery.trim() ||
@@ -502,7 +531,65 @@ export default function App() {
   const fashionProducts = products.filter((p) => p.category === 'Fashion');
   const groceryProducts = products.filter((p) => p.category === 'Supermarket & Raw Foods');
   const techProducts = products.filter((p) => p.category === 'Phones & Tablets' || p.category === 'Electronics');
-  const everydayProducts = products.filter((p) => p.category === 'Appliances' || p.tags?.includes('Household') || p.id.startsWith('prod-indomie-') || p.id.startsWith('prod-oraimo-') || p.id.startsWith('prod-itel-') || p.id.startsWith('prod-nivea-') || p.id.startsWith('prod-golden-') || p.id.startsWith('prod-milo-') || p.id.startsWith('prod-dettol-') || p.id.startsWith('prod-silvercrest-') || p.id.startsWith('prod-binatone-'));
+  const everydayProducts = products.filter((p) => p.category === 'Appliances' || p.tags?.includes('Household') || p.id.startsWith('prod-indomie-') || p.id.startsWith('prod-oraimo-') || p.id.startsWith('prod-itel-') || p.id.startsWith('prod-nivea-') || p.id.startsWith('prod-golden-') || p.id.startsWith('prod-milo-') || p.id.startsWith('prod-morningfresh-') || p.id.startsWith('prod-silvercrest-') || p.id.startsWith('prod-binatone-'));
+
+  // 0. Dedicated Full-Page Admin Dashboard View (Not a Modal)
+  if (isAdminOpen) {
+    return (
+      <AdminPortal
+        isOpen={true}
+        onClose={closeAdminModal}
+        currentUser={currentUser}
+        onAdminLoginSuccess={(profile) => {
+          setCurrentUser(profile);
+          saveUserProfile(profile);
+        }}
+        onAdminSignOut={() => {
+          handleSignOut();
+        }}
+        products={products}
+        orders={orders}
+        users={users}
+        gatewaySettings={gatewaySettings}
+        brandSettings={brandSettings}
+        admins={admins}
+        onCreateProduct={createProductInDb}
+        onUpdateProduct={updateProductInDb}
+        onDeleteProduct={deleteProductFromDb}
+        onUpdateOrderStatus={updateOrderStatusInDb}
+        onUpdateUser={async (updated) => {
+          await saveUserProfile(updated);
+          setUsers((prev) => prev.map((u) => (u.uid === updated.uid ? updated : u)));
+        }}
+        onSaveGatewaySettings={async (settings) => {
+          await saveGatewaySettings(settings);
+          setGatewaySettings(settings);
+        }}
+        onSaveBrandSettings={async (brand) => {
+          await saveBrandSettings(brand);
+          setBrandSettings(brand);
+        }}
+        onSyncCatalogToDb={async () => {
+          const fresh = await syncAllProductsToDb(true);
+          setProducts(fresh);
+        }}
+        onAddAdmin={async (newAdmin) => {
+          await addAdminToDb(newAdmin);
+          setAdmins((prev) => [newAdmin, ...prev.filter((a) => a.id !== newAdmin.id)]);
+        }}
+        onRemoveAdmin={async (adminId) => {
+          await removeAdminFromDb(adminId);
+          setAdmins((prev) => prev.filter((a) => a.id !== adminId));
+        }}
+        onToggleAdminStatus={async (adminId, isActive) => {
+          await toggleAdminStatusInDb(adminId, isActive);
+          setAdmins((prev) =>
+            prev.map((a) => (a.id === adminId ? { ...a, isActive } : a))
+          );
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900 pb-16 md:pb-0">
@@ -589,7 +676,7 @@ export default function App() {
                   Luxury Vehicles, Fashion Wear, Tech & Farm Produce
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
-                  Verified Tokunbo & Registered cars with physical Lagos inspection, all designer sets flat ₦25,000, and escrow purchase protection.
+                  Verified Tokunbo & Registered cars with physical Lagos inspection, all designer sets flat ₦25,000, and verified purchase protection.
                 </p>
 
                 <div className="pt-2 flex flex-wrap gap-2.5">
@@ -774,7 +861,7 @@ export default function App() {
         )}
 
         {/* 4. SHOWCASE SECTION: LUXURY HUMAN HAIR & WIGS */}
-        {(selectedCategory === 'All Departments' || selectedCategory === 'Hair & Luxury Wigs' || selectedCategory === 'Health & Beauty') && !searchQuery && (
+        {(selectedCategory === 'All Departments' || selectedCategory === 'Hair & Luxury Wigs' || selectedCategory === 'Beauty & Personal Care') && !searchQuery && (
           <section className="bg-white rounded-2xl border border-rose-100 p-4 sm:p-6 shadow-2xs space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-rose-100/60">
               <div className="flex items-center gap-2.5">
@@ -995,8 +1082,12 @@ export default function App() {
       </main>
       )}
 
-      {/* 7. Footer with discrete staff link */}
-      <Footer logoUrl={brandSettings.logoUrl} onOpenAdmin={openAdminModal} />
+      {/* 7. Footer with discrete staff link and refund policy */}
+      <Footer 
+        logoUrl={brandSettings.logoUrl} 
+        onOpenAdmin={openAdminModal} 
+        onOpenRefundPolicy={openRefundPolicyModal} 
+      />
 
       {/* 8. Mobile Bottom Navigation */}
       <MobileBottomNav
@@ -1047,6 +1138,12 @@ export default function App() {
         gatewaySettings={gatewaySettings}
         onOrderCompleted={handleOrderCompleted}
         onOpenAuth={openAuthModal}
+        onOpenRefundPolicy={openRefundPolicyModal}
+      />
+
+      <RefundPolicyModal
+        isOpen={isRefundPolicyOpen}
+        onClose={closeRefundPolicyModal}
       />
 
       <OrderTrackingModal
@@ -1082,91 +1179,6 @@ export default function App() {
           }}
         />
       )}
-
-      {/* Admin ERP Portal */}
-      <AdminPortal
-        isOpen={isAdminOpen}
-        onClose={closeAdminModal}
-        products={products}
-        orders={orders}
-        users={users}
-        gatewaySettings={gatewaySettings}
-        brandSettings={brandSettings}
-        admins={admins}
-        onCreateProduct={createProductInDb}
-        onUpdateProduct={updateProductInDb}
-        onDeleteProduct={deleteProductFromDb}
-        onUpdateOrderStatus={updateOrderStatusInDb}
-        onUpdateUser={async (updated) => {
-          await saveUserProfile(updated);
-          setUsers((prev) => prev.map((u) => (u.uid === updated.uid ? updated : u)));
-        }}
-        onSaveGatewaySettings={async (settings) => {
-          await saveGatewaySettings(settings);
-          setGatewaySettings(settings);
-        }}
-        onSaveBrandSettings={async (brand) => {
-          await saveBrandSettings(brand);
-          setBrandSettings(brand);
-        }}
-        onSyncCatalogToDb={async () => {
-          const fresh = await syncAllProductsToDb(true);
-          setProducts(fresh);
-        }}
-        onAddAdmin={async (newAdmin) => {
-          await addAdminToDb(newAdmin);
-          setAdmins((prev) => [newAdmin, ...prev.filter((a) => a.id !== newAdmin.id)]);
-        }}
-        onRemoveAdmin={async (adminId) => {
-          await removeAdminFromDb(adminId);
-          setAdmins((prev) => prev.filter((a) => a.id !== adminId));
-        }}
-        onToggleAdminStatus={async (adminId, isActive) => {
-          await toggleAdminStatusInDb(adminId, isActive);
-          setAdmins((prev) =>
-            prev.map((a) => (a.id === adminId ? { ...a, isActive } : a))
-          );
-        }}
-        onMakeCurrentUserAdmin={() => {
-          if (currentUser) {
-            const updated: UserProfile = { ...currentUser, role: 'admin' };
-            setCurrentUser(updated);
-            saveUserProfile(updated);
-            const existing = admins.find((a) => a.email.toLowerCase() === currentUser.email.toLowerCase());
-            if (!existing) {
-              const newAdmin: AdminUser = {
-                id: `admin-${currentUser.uid}`,
-                email: currentUser.email,
-                name: currentUser.displayName || currentUser.email.split('@')[0],
-                role: 'super_admin',
-                department: 'Executive Administration',
-                addedAt: new Date().toISOString(),
-                isActive: true,
-              };
-              addAdminToDb(newAdmin).then(() => {
-                setAdmins((prev) => [newAdmin, ...prev]);
-              });
-            }
-          } else {
-            const demoAdmin: UserProfile = {
-              uid: 'demo-super-admin',
-              email: 'admin@unitworld.com',
-              displayName: 'Unitworld Super Admin',
-              role: 'admin',
-              mfaEnabled: true,
-              preferences: {
-                currency: 'NGN',
-                emailNotifications: true,
-                smsNotifications: true,
-                whatsappAlerts: true,
-              },
-              addresses: [],
-              createdAt: new Date().toISOString(),
-            };
-            setCurrentUser(demoAdmin);
-          }
-        }}
-      />
 
       {/* Real-time Push Notification Toast */}
       <NotificationToast

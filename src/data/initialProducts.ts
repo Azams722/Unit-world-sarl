@@ -688,10 +688,10 @@ export const INITIAL_PRODUCTS: Product[] = [
   {
     id: 'prod-nivea-deep-rollon',
     title: 'NIVEA MEN Deep Black Charcoal 72H Anti-Perspirant Roll-On 50ml (Pack of 3 Bottles)',
-    description: 'Value pack of 3 bottles of NIVEA MEN Deep Anti-perspirant roll-on deodorant. Formulated with Black Carbon charcoal for powerful antibacterial odor protection and 72-hour dry freshness. Non-staining formula.',
+    description: 'Value pack of 3 bottles of NIVEA MEN Deep Anti-perspirant roll-on deodorant. Formulated with Black Carbon charcoal for powerful 72-hour freshness and clean odor defense. Non-staining formula.',
     price: 4780,
     originalPrice: 6500,
-    category: 'Health & Beauty',
+    category: 'Beauty & Personal Care',
     condition: 'Brand New',
     images: [
       'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80'
@@ -706,8 +706,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     tags: ['Nivea Men Deep', 'Pack of 3', '72H Roll-On', 'Black Charcoal'],
     specs: {
       'Package': 'Pack of 3 Glass Roll-On Bottles (50ml each)',
-      'Formula': 'Black Charcoal Antibacterial Defense',
-      'Protection': '72 Hours Sweat and Odor Resistance'
+      'Formula': 'Black Charcoal Clean Deodorant Protection',
+      'Protection': '72 Hours Clean Freshness'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -736,7 +736,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     specs: {
       'Volume': '5 Litres Sealed Jerrycan with Pour Spout',
       'Purity': '100% Pure Refined Soya Bean Vegetable Cooking Oil',
-      'Health': 'Zero Cholesterol, Enriched with Vitamin A'
+      'Dietary': 'Zero Cholesterol, Enriched with Vitamin A'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -771,30 +771,30 @@ export const INITIAL_PRODUCTS: Product[] = [
     updatedAt: new Date().toISOString(),
   },
 
-  // 26. DETTOL ANTISEPTIC LIQUID 1L
+  // 26. MORNING FRESH DISHWASHING LIQUID 1L
   {
-    id: 'prod-dettol-antiseptic-1l',
-    title: 'Dettol Original Anti-Bacterial Disinfectant Liquid for Bathing & Cleansing (1000ml / 1L)',
-    description: 'Family-size 1-litre bottle of Dettol Antiseptic Disinfectant Liquid. Kills 99.9% of germs and bacteria. Trusted for personal bathing hygiene, wound first-aid cleaning, laundry disinfection, and household sanitization.',
-    price: 6720,
-    originalPrice: 8500,
-    category: 'Health & Beauty',
+    id: 'prod-morningfresh-lemon-1l',
+    title: 'Morning Fresh Original Lemon Concentrated Dishwashing Liquid (1000ml / 1L)',
+    description: 'Original Morning Fresh concentrated dishwashing liquid. Rich grease-cutting lather that leaves dinner plates, cooking pots, and glassware sparkling clean with a fresh citrus lemon fragrance.',
+    price: 4950,
+    originalPrice: 6200,
+    category: 'Supermarket & Raw Foods',
     condition: 'Brand New',
     images: [
-      'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=800&q=80'
+      'https://images.unsplash.com/photo-1585832770485-e68a5dbfad52?auto=format&fit=crop&w=800&q=80'
     ],
-    stock: 60,
-    sku: 'UW-HEALTH-DETTOL-1L',
-    seller: 'Reckitt Benckiser Official Store',
+    stock: 75,
+    sku: 'UW-SUPER-MFRESH-1L',
+    seller: 'PZ Cussons Official Distributor',
     location: 'Lagos Warehouse',
-    rating: 5.0,
-    reviewCount: 163,
+    rating: 4.9,
+    reviewCount: 138,
     featured: false,
-    tags: ['Dettol Liquid', '1000ml / 1L', 'Antiseptic', 'First Aid'],
+    tags: ['Morning Fresh', '1000ml / 1L', 'Dishwashing Liquid', 'Kitchen Supplies'],
     specs: {
       'Volume': '1,000ml (1 Litre) Heavy Bottle',
-      'Efficacy': 'Kills 99.9% of Harmful Germs and Bacteria',
-      'NAFDAC Reg': 'Official NAFDAC Certified Formulation'
+      'Fragrance': 'Zesty Citrus Lemon',
+      'Manufacturer': 'PZ Cussons Nigeria Plc'
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -825,7 +825,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: 38,
     featured: true,
-    tags: ['Luxury 5x5 bounce', 'Human Hair Wig', '5x5 Closure', 'Bounce Curls', '60,000 Naira', 'Hair & Luxury Wigs', 'Health & Beauty'],
+    tags: ['Luxury 5x5 bounce', 'Human Hair Wig', '5x5 Closure', 'Bounce Curls', '60,000 Naira', 'Hair & Luxury Wigs', 'Beauty & Personal Care'],
     specs: {
       'Product Name': 'Luxury 5x5 Bounce',
       'Closure Size': '5x5 HD Transparent Lace Closure',
@@ -864,7 +864,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 42,
     featured: true,
-    tags: ['Sdd celebrity fringe', 'Super Double Drawn', 'Celebrity Fringe', 'Human Hair Wig', '61,000 Naira', 'Hair & Luxury Wigs', 'Health & Beauty'],
+    tags: ['Sdd celebrity fringe', 'Super Double Drawn', 'Celebrity Fringe', 'Human Hair Wig', '61,000 Naira', 'Hair & Luxury Wigs', 'Beauty & Personal Care'],
     specs: {
       'Product Name': 'SDD Celebrity Fringe',
       'Grade': 'Super Double Drawn (SDD) Thick Bottoms',
@@ -903,7 +903,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.8,
     reviewCount: 29,
     featured: true,
-    tags: ['Jerry Curl', 'Closure 4x4', 'Natural color', 'Human Hair Wig', '27,000 Naira', 'Hair & Luxury Wigs', 'Health & Beauty'],
+    tags: ['Jerry Curl', 'Closure 4x4', 'Natural color', 'Human Hair Wig', '27,000 Naira', 'Hair & Luxury Wigs', 'Beauty & Personal Care'],
     specs: {
       'Product Name': 'Jerry Curl',
       'Closure Size': 'Closure: 4x4 Swiss Lace',
@@ -941,7 +941,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 51,
     featured: true,
-    tags: ['pixie curl', 'Water friendly', 'Wet & Go', 'Short Pixie', 'Human Hair Wig', '20,000 Naira', 'Hair & Luxury Wigs', 'Health & Beauty'],
+    tags: ['pixie curl', 'Water friendly', 'Wet & Go', 'Short Pixie', 'Human Hair Wig', '20,000 Naira', 'Hair & Luxury Wigs', 'Beauty & Personal Care'],
     specs: {
       'Product Name': 'Pixie Curl',
       'Special Feature': 'Water Friendly (Wet & Go)',
@@ -964,7 +964,7 @@ export const CATEGORIES = [
   { name: 'Electronics', icon: 'Tv' },
   { name: 'Appliances', icon: 'Refrigerator' },
   { name: 'Computing', icon: 'Laptop' },
-  { name: 'Health & Beauty', icon: 'Sparkles' },
+  { name: 'Beauty & Personal Care', icon: 'Sparkles' },
   { name: 'Home & Office', icon: 'Armchair' },
   { name: 'Baby Products', icon: 'Baby' },
   { name: 'Gaming', icon: 'Gamepad2' },

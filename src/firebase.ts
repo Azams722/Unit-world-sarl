@@ -41,7 +41,7 @@ export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
   brandName: 'UNITWORLD SARL',
   tagline: 'YOUR GLOBAL MARKETPLACE.',
   supportPhone: '+234 800 8648 9675',
-  supportEmail: 'contact@unitworld.com',
+  supportEmail: 'contact@unit-world-sarl.com',
   whatsappNumber: '+234 812 345 6789',
   address: 'Victoria Island, Lagos, Nigeria / SARL Headquarters'
 };
@@ -113,6 +113,11 @@ export async function syncAllProductsToDb(overwriteExisting = true): Promise<Pro
   const path = 'products';
   try {
     console.log('Syncing all verified products and real images to Firestore database...');
+    // Delete any old medical/dettol product from Firestore
+    try {
+      await deleteDoc(doc(db, 'products', 'prod-dettol-antiseptic-1l'));
+    } catch {}
+
     const batch = writeBatch(db);
     for (const prod of INITIAL_PRODUCTS) {
       const ref = doc(db, 'products', prod.id);
@@ -146,9 +151,9 @@ export async function syncAllProductsToDb(overwriteExisting = true): Promise<Pro
       paystackSecretKey: '',
       paystackEnabled: false,
       currency: 'NGN',
-      merchantEmail: 'payments@unitworld.com',
+      merchantEmail: 'payments@unit-world-sarl.com',
       merchantBusinessName: 'UNITWORLD SARL GLOBAL COMMERCE',
-      webhookUrl: 'https://api.unitworld.com/webhook/paystack',
+      webhookUrl: 'https://api.unit-world-sarl.com/webhook/paystack',
       bankAccountDetails: {
         bankName: 'Guaranty Trust Bank (GTBank)',
         accountName: 'UNITWORLD SARL GLOBAL COMMERCE',
@@ -191,6 +196,11 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
         ) {
           needsUpdate = true;
         }
+        // Purge old medical or Dettol items from Firestore
+        if (data.id === 'prod-dettol-antiseptic-1l' || data.sku?.includes('HEALTH')) {
+          needsUpdate = true;
+          deleteDoc(d.ref).catch(() => {});
+        }
       });
 
       // If new catalog essentials or hair products are missing from DB, trigger sync
@@ -199,7 +209,9 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
         !existingIds.has('prod-oraimo-powerbank-30000mah') ||
         !existingIds.has('prod-binatone-rechargeable-fan') ||
         !existingIds.has('prod-hair-luxury-5x5-bounce') ||
-        !existingIds.has('prod-hair-sdd-celebrity-fringe')
+        !existingIds.has('prod-hair-sdd-celebrity-fringe') ||
+        !existingIds.has('prod-morningfresh-lemon-1l') ||
+        existingIds.has('prod-dettol-antiseptic-1l')
       ) {
         needsUpdate = true;
       }
@@ -213,6 +225,15 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
     const loaded: Product[] = [];
     productsSnapshot.forEach((d) => {
       const prod = d.data() as Product;
+      // Filter out any medical/health items
+      if (prod.id === 'prod-dettol-antiseptic-1l' || prod.sku?.includes('HEALTH') || prod.tags?.includes('First Aid')) {
+        deleteDoc(d.ref).catch(() => {});
+        return;
+      }
+      if (prod.category === 'Health & Beauty') {
+        prod.category = 'Beauty & Personal Care';
+        updateDoc(d.ref, { category: 'Beauty & Personal Care' }).catch(() => {});
+      }
       if (prod.images) {
         prod.images = prod.images.map((img: string) =>
           typeof img === 'string' && img.startsWith('/src/assets/images/')
@@ -274,19 +295,10 @@ export const DEFAULT_ADMINS: AdminUser[] = [
   {
     id: 'admin-super-1',
     email: 'tobi@acourze.com',
-    name: 'Tobi (Executive Admin)',
+    name: 'Tobi',
     role: 'super_admin',
     department: 'Executive Operations',
     addedAt: '2025-01-01T00:00:00.000Z',
-    isActive: true,
-  },
-  {
-    id: 'admin-catalog-2',
-    email: 'admin@unitworld.com',
-    name: 'Unitworld Super Admin',
-    role: 'catalog_manager',
-    department: 'Catalog & Inventory Control',
-    addedAt: '2025-02-15T00:00:00.000Z',
     isActive: true,
   }
 ];
@@ -297,8 +309,15 @@ export async function getAdminsFromDb(): Promise<AdminUser[]> {
     const snapshot = await getDocs(collection(db, path));
     if (!snapshot.empty) {
       const loaded: AdminUser[] = [];
-      snapshot.forEach(docSnap => loaded.push(docSnap.data() as AdminUser));
-      return loaded;
+      snapshot.forEach(docSnap => {
+        const adm = docSnap.data() as AdminUser;
+        if (adm.email?.toLowerCase() !== 'tobi@acourze.com') {
+          deleteDoc(docSnap.ref).catch(() => {});
+        } else {
+          loaded.push(adm);
+        }
+      });
+      if (loaded.length > 0) return loaded;
     }
   } catch (err) {
     console.warn('Get admins read notice (using defaults if permission restricted):', err);
@@ -479,91 +498,7 @@ export const INITIAL_USERS: UserProfile[] = [
       whatsappAlerts: true,
     },
     createdAt: '2025-01-10T08:30:00.000Z',
-    lastLoginAt: '2026-09-27T06:45:00.000Z'
-  },
-  {
-    uid: 'user-chidi-buyer',
-    email: 'chidi.okonkwo@gmail.com',
-    displayName: 'Chidi Okonkwo',
-    phone: '+234 803 241 8892',
-    role: 'customer',
-    mfaEnabled: false,
-    status: 'active',
-    addresses: [
-      {
-        id: 'addr-2',
-        fullName: 'Chidi Okonkwo',
-        phone: '+234 803 241 8892',
-        street: 'Plot 7, Victoria Island Business District',
-        city: 'Lagos',
-        state: 'Lagos State',
-        isDefault: true
-      }
-    ],
-    preferences: {
-      currency: 'NGN',
-      emailNotifications: true,
-      smsNotifications: true,
-      whatsappAlerts: true,
-    },
-    createdAt: '2025-02-14T11:20:00.000Z',
-    lastLoginAt: '2026-09-26T19:10:00.000Z'
-  },
-  {
-    uid: 'user-amina-kano',
-    email: 'amina.bello@yahoo.com',
-    displayName: 'Amina Bello',
-    phone: '+234 802 887 4120',
-    role: 'customer',
-    mfaEnabled: false,
-    status: 'active',
-    addresses: [
-      {
-        id: 'addr-3',
-        fullName: 'Amina Bello',
-        phone: '+234 802 887 4120',
-        street: '22 Bompai Road, Nassarawa GRA',
-        city: 'Kano',
-        state: 'Kano State',
-        isDefault: true
-      }
-    ],
-    preferences: {
-      currency: 'NGN',
-      emailNotifications: true,
-      smsNotifications: true,
-      whatsappAlerts: false,
-    },
-    createdAt: '2025-03-01T14:15:00.000Z',
-    lastLoginAt: '2026-09-25T16:22:00.000Z'
-  },
-  {
-    uid: 'user-emeka-motors',
-    email: 'emeka.nnamdi@outlook.com',
-    displayName: 'Emeka Nnamdi',
-    phone: '+234 814 559 0311',
-    role: 'customer',
-    mfaEnabled: true,
-    status: 'active',
-    addresses: [
-      {
-        id: 'addr-4',
-        fullName: 'Emeka Nnamdi',
-        phone: '+234 814 559 0311',
-        street: '55 Isaac John Street, Ikeja GRA',
-        city: 'Lagos',
-        state: 'Lagos State',
-        isDefault: true
-      }
-    ],
-    preferences: {
-      currency: 'NGN',
-      emailNotifications: true,
-      smsNotifications: true,
-      whatsappAlerts: true,
-    },
-    createdAt: '2025-03-12T09:40:00.000Z',
-    lastLoginAt: '2026-09-27T05:12:00.000Z'
+    lastLoginAt: '2026-10-22T08:00:00.000Z'
   }
 ];
 
@@ -573,30 +508,26 @@ export async function getAllUsersFromDb(): Promise<UserProfile[]> {
   try {
     const snapshot = await getDocs(collection(db, path));
     if (!snapshot.empty) {
-      snapshot.forEach(docSnap => dbUsers.push(docSnap.data() as UserProfile));
+      snapshot.forEach(docSnap => {
+        const u = docSnap.data() as UserProfile;
+        if (u.email?.toLowerCase() !== 'tobi@acourze.com') {
+          deleteDoc(docSnap.ref).catch(() => {});
+        } else {
+          dbUsers.push(u);
+        }
+      });
     }
   } catch (err) {
     console.warn('Get users from Firestore notice:', err);
   }
 
-  // Retrieve cached local users
-  let localUsers: UserProfile[] = [];
+  // Clear any legacy local storage users
   try {
-    const raw = localStorage.getItem('unitworld_registered_users');
-    if (raw) {
-      localUsers = JSON.parse(raw);
-    }
-  } catch (e) {
-    // Ignore JSON error
-  }
+    localStorage.removeItem('unitworld_registered_users');
+  } catch (e) {}
 
-  // Merge unique by uid or email
-  const userMap = new Map<string, UserProfile>();
-  INITIAL_USERS.forEach(u => userMap.set(u.uid, u));
-  localUsers.forEach(u => userMap.set(u.uid, u));
-  dbUsers.forEach(u => userMap.set(u.uid, u));
-
-  return Array.from(userMap.values());
+  if (dbUsers.length > 0) return dbUsers;
+  return INITIAL_USERS;
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
@@ -661,9 +592,9 @@ export async function getGatewaySettings(): Promise<GatewaySettings> {
     paystackSecretKey: '',
     paystackEnabled: false,
     currency: 'NGN',
-    merchantEmail: 'payments@unitworld.com',
+    merchantEmail: 'payments@unit-world-sarl.com',
     merchantBusinessName: 'UNITWORLD SARL GLOBAL COMMERCE',
-    webhookUrl: 'https://api.unitworld.com/webhook/paystack',
+    webhookUrl: 'https://api.unit-world-sarl.com/webhook/paystack',
     bankAccountDetails: {
       bankName: 'Guaranty Trust Bank (GTBank)',
       accountName: 'UNITWORLD SARL GLOBAL COMMERCE',

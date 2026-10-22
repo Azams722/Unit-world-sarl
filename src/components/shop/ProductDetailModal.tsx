@@ -298,10 +298,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="mt-4 p-3.5 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2">
                   <div className="flex items-center gap-2 text-sky-900 font-bold text-xs">
                     <ShieldCheck className="w-4 h-4 text-[#0284C7]" />
-                    <span>Unitworld Buyer Protection & Escrow</span>
+                    <span>Unitworld Buyer Protection & Verified Delivery</span>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Every product listed is verified by Unitworld Sarl logistics network. Escrow guarantee ensures payment is only released upon delivery and inspection.
+                    Every product listed is verified by Unitworld Sarl logistics network. Direct purchase guarantee ensures orders are inspected and delivered in full compliance.
                   </p>
                   {product.location && !isFieldOmitted('location') && (
                     <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium pt-1 border-t border-sky-100">

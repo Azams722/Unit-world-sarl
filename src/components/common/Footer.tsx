@@ -1,13 +1,14 @@
 import React from 'react';
-import { ShieldCheck, Truck, RotateCcw, Headphones, Lock } from 'lucide-react';
+import { ShieldCheck, Truck, Headphones, Lock, FileText } from 'lucide-react';
 import { UnitworldLogo } from './UnitworldLogo';
 
 interface FooterProps {
   logoUrl?: string;
   onOpenAdmin?: () => void;
+  onOpenRefundPolicy?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin }) => {
+export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin, onOpenRefundPolicy }) => {
   return (
     <footer className="bg-slate-900 text-slate-300 border-t border-slate-800">
       {/* Trust Pillars Strip */}
@@ -18,8 +19,8 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin }) => {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-bold text-white uppercase tracking-wider text-[11px]">100% Verified Escrow</p>
-              <p className="text-slate-400 text-[11px] mt-0.5">Physical inspection before final settlement</p>
+              <p className="font-bold text-white uppercase tracking-wider text-[11px]">100% Quality & Protection</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">Physical inspection on delivery</p>
             </div>
           </div>
 
@@ -62,7 +63,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin }) => {
           <div className="space-y-3">
             <UnitworldLogo logoUrl={logoUrl} className="h-10" inverted={true} />
             <p className="text-xs text-slate-400 leading-relaxed">
-              Unitworld Sarl is Africa's trusted global marketplace and automotive dealership network. Providing verified vehicles, designer fashion, mobile tech, and essential raw foods with integrated ERP logistics and Paystack settlement.
+              Unitworld Sarl is Africa's trusted global marketplace and automotive dealership network. Providing verified vehicles, designer fashion, mobile tech, and essential raw foods with integrated ERP logistics and direct settlement.
             </p>
             <p className="text-xs text-slate-400">
               Showrooms in Victoria Island, Ikeja GRA, and Igando, Lagos, Nigeria.
@@ -97,7 +98,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin }) => {
             </ul>
           </div>
 
-          {/* Payments & Escrow */}
+          {/* Payments & Security */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">
               Payment & Security
@@ -105,32 +106,47 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin }) => {
             <p className="text-xs text-slate-400 mb-3 leading-relaxed">
               Online checkout gateway coming soon. Currently accepting direct verified transfers & doorstep verification.
             </p>
-            <div className="flex flex-wrap gap-2 text-[10px] font-bold font-mono">
+            <div className="flex flex-wrap gap-2 text-[10px] font-bold font-mono mb-4">
               <span className="bg-slate-800 text-amber-400 px-2 py-1 rounded border border-slate-700">ONLINE GATEWAY (COMING SOON)</span>
               <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">BANK TRANSFER</span>
-              <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">ESCROW VERIFIED</span>
+              <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">VERIFIED SETTLEMENT</span>
             </div>
+            
+            {onOpenRefundPolicy && (
+              <button
+                onClick={onOpenRefundPolicy}
+                className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 underline font-medium cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>View Refund & Cancellation Policy</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="mt-10 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
-          <p>© {new Date().getFullYear()} Unitworld Sarl. All rights reserved. Global Marketplace & ERP.</p>
-          <div className="flex items-center gap-4 text-slate-400">
+          <p>© {new Date().getFullYear()} Unitworld Sarl (<span className="font-mono text-slate-400">unit-world-sarl.com</span>). All rights reserved. Global Marketplace & ERP.</p>
+          <div className="flex flex-wrap items-center gap-4 text-slate-400">
             <span>Privacy Policy</span>
             <span>·</span>
             <span>Terms of Service</span>
             <span>·</span>
-            <span>Escrow & Inspection Agreement</span>
+            <button
+              onClick={onOpenRefundPolicy}
+              className="text-amber-400 hover:text-amber-300 font-semibold transition-colors cursor-pointer underline"
+            >
+              Refund & Cancellation Policy
+            </button>
             {onOpenAdmin && (
               <>
                 <span>·</span>
                 <button
                   onClick={onOpenAdmin}
-                  className="text-slate-600 hover:text-slate-400 text-xs transition-colors cursor-pointer"
-                  title="Staff Portal (Ctrl+Shift+A)"
+                  className="text-slate-400 hover:text-amber-400 text-xs font-semibold transition-colors cursor-pointer"
+                  title="Admin ERP Dashboard"
                 >
-                  Staff Portal
+                  Admin ERP Dashboard
                 </button>
               </>
             )}

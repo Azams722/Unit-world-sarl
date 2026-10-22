@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-1.5 text-amber-400 font-medium">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Unitworld Official Escrow: 100% Verified Delivery
+              Unitworld Official Guarantee: 100% Verified Delivery
             </span>
             <span className="flex items-center gap-1.5">
               <PhoneCall className="w-3.5 h-3.5 text-slate-400" />
@@ -76,14 +76,14 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-5 text-slate-300">
-            {currentUser?.role === 'admin' && onOpenAdmin && (
+            {onOpenAdmin && (
               <button
                 onClick={onOpenAdmin}
                 className="hover:text-amber-300 text-amber-400 font-bold transition-colors cursor-pointer flex items-center gap-1.5 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30"
-                title="Open Backend Admin Portal"
+                title="Open Backend Admin ERP Dashboard"
               >
                 <LayoutDashboard className="w-3.5 h-3.5 text-amber-400" />
-                Admin Backend Portal
+                Admin Dashboard (ERP)
               </button>
             )}
             <button

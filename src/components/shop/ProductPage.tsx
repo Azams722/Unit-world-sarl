@@ -422,7 +422,7 @@ Please provide ordering, inspection and delivery confirmation.`
 
                 <div className="text-right">
                   <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black px-2.5 py-1 rounded uppercase">
-                    Escrow Protected
+                    Verified Purchase
                   </span>
                 </div>
               </div>
@@ -514,7 +514,7 @@ Please provide ordering, inspection and delivery confirmation.`
                 </div>
                 <div className="p-2 bg-slate-50 rounded-lg flex flex-col items-center">
                   <Lock className="w-4 h-4 text-sky-600 mb-1" />
-                  <span>Secure Escrow</span>
+                  <span>Buyer Protected</span>
                 </div>
                 <div className="p-2 bg-slate-50 rounded-lg flex flex-col items-center">
                   <Truck className="w-4 h-4 text-amber-600 mb-1" />

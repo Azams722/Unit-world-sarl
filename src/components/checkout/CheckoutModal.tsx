@@ -26,6 +26,7 @@ interface CheckoutModalProps {
   gatewaySettings: GatewaySettings;
   onOrderCompleted: (order: Order) => void;
   onOpenAuth: () => void;
+  onOpenRefundPolicy?: () => void;
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
@@ -36,6 +37,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   gatewaySettings,
   onOrderCompleted,
   onOpenAuth,
+  onOpenRefundPolicy,
 }) => {
   const [step, setStep] = useState<'details' | 'payment' | 'success'>('details');
   const [deliveryMethod, setDeliveryMethod] = useState<'door_delivery' | 'pickup_station'>('door_delivery');
@@ -329,7 +331,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
               </div>
 
-              {/* Option 2: Direct Bank Settlement / Escrow Wire */}
+              {/* Option 2: Direct Bank Settlement / Corporate Wire */}
               <label 
                 className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                   paymentMethod === 'bank_transfer'
@@ -350,7 +352,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     Direct Bank Settlement / Wire Transfer
                   </span>
                   <p className="text-[11px] text-slate-600 mt-1">
-                    Ideal for vehicles and large corporate purchases. Wire funds directly to Unitworld GTBank Escrow Account.
+                    Ideal for vehicles and large corporate purchases. Wire funds directly to Unitworld GTBank Commercial Corporate Account.
                   </p>
                   {paymentMethod === 'bank_transfer' && (
                     <div className="mt-2 p-2.5 bg-white border border-slate-200 rounded-lg text-xs space-y-1 font-mono">
@@ -408,6 +410,18 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </span>
               </div>
             </div>
+
+            <p className="text-[11px] text-slate-500 leading-normal text-center px-1">
+              By confirming this order, you agree to Unitworld Sarl's{' '}
+              <button
+                type="button"
+                onClick={onOpenRefundPolicy}
+                className="text-sky-600 hover:text-sky-800 underline font-semibold cursor-pointer"
+              >
+                Refund &amp; Cancellation Policy
+              </button>
+              . Goods delivered in good condition and matching specifications are non-refundable.
+            </p>
 
             <div className="flex gap-3">
               <button
