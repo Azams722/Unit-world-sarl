@@ -339,47 +339,37 @@ export default function App() {
       console.warn('Real-time orders snapshot notice:', err);
     });
 
-    // Auth state listener: strictly restricted to tobi@acourze.com
+    // Auth state listener
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        if (user.email?.toLowerCase() !== 'tobi@acourze.com') {
-          auth.signOut().catch(() => {});
-          setCurrentUser(null);
-          return;
-        }
+        const isAdmin = user.email?.toLowerCase() === 'tobi@acourze.com';
         const profile = await getUserProfile(user.uid);
         if (profile) {
-          setCurrentUser(profile);
-          setUsers([profile]);
+          const synced: UserProfile = { ...profile, role: isAdmin ? 'admin' : profile.role || 'customer' };
+          setCurrentUser(synced);
+          setUsers((prev) => {
+            const exists = prev.some((u) => u.uid === synced.uid);
+            return exists ? prev.map((u) => (u.uid === synced.uid ? synced : u)) : [synced, ...prev];
+          });
         } else {
-          const adminProfile: UserProfile = {
+          const userProfile: UserProfile = {
             uid: user.uid,
-            email: 'tobi@acourze.com',
-            displayName: user.displayName || 'Tobi',
-            role: 'admin',
-            mfaEnabled: true,
+            email: user.email || '',
+            displayName: user.displayName || user.email?.split('@')[0] || 'Customer',
+            role: isAdmin ? 'admin' : 'customer',
+            mfaEnabled: isAdmin,
             preferences: {
               currency: 'NGN',
               emailNotifications: true,
               smsNotifications: true,
               whatsappAlerts: true,
             },
-            addresses: [
-              {
-                id: 'addr-1',
-                fullName: 'Tobi',
-                phone: '+234 800 8648 967',
-                street: '14B Admiralty Way, Lekki Phase 1',
-                city: 'Lagos',
-                state: 'Lagos State',
-                isDefault: true
-              }
-            ],
-            createdAt: '2025-01-10T08:30:00.000Z',
+            addresses: [],
+            createdAt: new Date().toISOString(),
           };
-          setCurrentUser(adminProfile);
-          saveUserProfile(adminProfile);
-          setUsers([adminProfile]);
+          setCurrentUser(userProfile);
+          saveUserProfile(userProfile);
+          setUsers((prev) => [userProfile, ...prev.filter((u) => u.uid !== userProfile.uid)]);
         }
       }
     });
@@ -642,7 +632,7 @@ export default function App() {
             {/* Left Category Quick Navigation (Desktop) */}
             <div className="hidden lg:block lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-3 shadow-2xs">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-2">
-                Marketplace Hubs
+                Store Departments
               </h3>
               <div className="space-y-0.5">
                 {CATEGORIES.slice(1, 10).map((cat) => (
@@ -662,7 +652,7 @@ export default function App() {
             <div className="lg:col-span-6 relative rounded-2xl overflow-hidden min-h-[300px] sm:min-h-[360px] bg-slate-900 border border-slate-800 shadow-md flex flex-col justify-end p-6 sm:p-8">
               <img
                 src="/assets/images/hero_marketplace_banner.jpg"
-                alt="Unitworld Global Marketplace"
+                alt="Unitworld Sarl Official Direct Store"
                 referrerPolicy="no-referrer"
                 className="absolute inset-0 w-full h-full object-cover opacity-60"
               />
@@ -670,13 +660,13 @@ export default function App() {
 
               <div className="relative z-10 space-y-3">
                 <span className="bg-[#0284C7] text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded shadow-xs inline-block">
-                  OFFICIAL DEALERSHIP & MARKETPLACE
+                  UNITWORLD SARL OFFICIAL DIRECT STORE
                 </span>
                 <h1 className="font-playfair text-xl sm:text-3xl font-bold text-white leading-tight text-balance">
                   Luxury Vehicles, Fashion Wear, Tech & Farm Produce
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
-                  Verified Tokunbo & Registered cars with physical Lagos inspection, all designer sets flat ₦25,000, and verified purchase protection.
+                  Direct sales of verified Tokunbo & Registered cars with physical Lagos inspection, designer fashion sets flat ₦25,000, tech & groceries — all sold directly by Unitworld Sarl with direct payment and no escrow.
                 </p>
 
                 <div className="pt-2 flex flex-wrap gap-2.5">
@@ -724,7 +714,7 @@ export default function App() {
                     Toyota Land Cruiser 2025 VXR
                   </h4>
                   <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                    5 Months Reg · Twin Turbo · Settlement 1M
+                    5 Months Reg · Twin Turbo · Direct Unitworld Sale
                   </p>
                 </div>
 
@@ -773,7 +763,7 @@ export default function App() {
                     Automobiles & Heavy Motors Showroom
                   </h2>
                   <p className="text-[11px] text-slate-500">
-                    Physical Lagos inspections in Igando, Lekki & Victoria Island. Settlement and Customs Exit certified.
+                    Physical Lagos inspections in Igando, Lekki & Victoria Island. Customs Exit certified and sold directly by Unitworld Sarl.
                   </p>
                 </div>
               </div>
@@ -965,7 +955,7 @@ export default function App() {
                     Supermarket & Farm Raw Foods
                   </h2>
                   <p className="text-[11px] text-slate-500">
-                    Direct from certified millers & Benue farms. 50kg Royal Stallion Rice, Benue Yams, Pure Delta Palm Oil.
+                    Supplied and sold directly from Unitworld Sarl depots. 50kg Royal Stallion Rice, Benue Yams, Pure Delta Palm Oil.
                   </p>
                 </div>
               </div>

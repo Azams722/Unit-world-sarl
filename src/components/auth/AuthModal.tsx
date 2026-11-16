@@ -5,30 +5,38 @@ import {
   Lock, 
   ShieldCheck, 
   KeyRound, 
+  User as UserIcon, 
+  Phone,
   Loader2, 
-  AlertCircle
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
-import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, googleProvider } from '../../firebase';
+import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth, googleProvider, saveUserProfile, findUserByEmail } from '../../firebase';
 import { UserProfile } from '../../types';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAuthSuccess: (profile: UserProfile) => void;
+  initialMode?: 'signin' | 'signup';
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onAuthSuccess,
+  initialMode = 'signin',
 }) => {
-  const [mode, setMode] = useState<'signin' | 'mfa_challenge'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'mfa_challenge'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
   const [mfaCode, setMfaCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Temporary container for pending MFA user
   const [pendingProfile, setPendingProfile] = useState<UserProfile | null>(null);
@@ -39,64 +47,148 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMsg(null);
 
     const userEmail = email.trim().toLowerCase();
 
-    // STRICT ACCESS CONTROL: Only tobi@acourze.com with password 123456 is permitted.
-    // Public registrations are completely closed.
-    if (userEmail !== 'tobi@acourze.com') {
-      setLoading(false);
-      setError('Access Denied: Account does not exist. Public signups are closed. Only approved administrator (tobi@acourze.com) is authorized.');
-      return;
-    }
-
-    if (password !== '123456') {
-      setLoading(false);
-      setError('Invalid password. Please enter the authorized password for tobi@acourze.com.');
-      return;
-    }
-
-    try {
-      let uid = 'user-tobi-admin';
-      try {
-        const res = await signInWithEmailAndPassword(auth, userEmail, password);
-        uid = res.user.uid;
-      } catch (fbErr) {
-        // Fallback to local admin profile if Firebase email/pwd auth provider is restricted in sandbox
-        console.warn('Firebase signin fallback for tobi@acourze.com');
+    // 1. SIGN UP (ACCOUNT CREATION) FLOW
+    if (mode === 'signup') {
+      if (!displayName.trim()) {
+        setLoading(false);
+        setError('Please enter your full name.');
+        return;
+      }
+      if (password.length < 6) {
+        setLoading(false);
+        setError('Password must be at least 6 characters.');
+        return;
       }
 
-      const adminProfile: UserProfile = {
-        uid,
-        email: 'tobi@acourze.com',
-        displayName: 'Tobi',
-        role: 'admin',
-        mfaEnabled: true,
-        preferences: {
-          currency: 'NGN',
-          emailNotifications: true,
-          smsNotifications: true,
-          whatsappAlerts: true,
-        },
-        addresses: [
-          {
-            id: 'addr-1',
-            fullName: 'Tobi',
-            phone: '+234 800 8648 967',
-            street: '14B Admiralty Way, Lekki Phase 1',
-            city: 'Lagos',
-            state: 'Lagos State',
-            isDefault: true
+      try {
+        // Check if an account already exists
+        const existing = await findUserByEmail(userEmail);
+        if (existing) {
+          setLoading(false);
+          setError('An account with this email address already exists. Please sign in instead.');
+          return;
+        }
+
+        let uid = `usr-${Date.now()}`;
+        try {
+          const res = await createUserWithEmailAndPassword(auth, userEmail, password);
+          uid = res.user.uid;
+        } catch (fbErr: any) {
+          console.warn('Firebase createUser notice:', fbErr);
+          if (fbErr.code === 'auth/email-already-in-use') {
+            setLoading(false);
+            setError('This email address is already registered. Please sign in.');
+            return;
           }
-        ],
-        createdAt: '2025-01-10T08:30:00.000Z',
+        }
+
+        const isAdmin = userEmail === 'tobi@acourze.com';
+        const newProfile: UserProfile = {
+          uid,
+          email: userEmail,
+          displayName: displayName.trim(),
+          phone: phone.trim() || undefined,
+          role: isAdmin ? 'admin' : 'customer',
+          mfaEnabled: isAdmin,
+          preferences: {
+            currency: 'NGN',
+            emailNotifications: true,
+            smsNotifications: true,
+            whatsappAlerts: true,
+          },
+          addresses: [],
+          createdAt: new Date().toISOString(),
+        };
+
+        await saveUserProfile(newProfile);
+        setSuccessMsg('Account created successfully! Signing you in...');
+        setTimeout(() => {
+          onAuthSuccess(newProfile);
+          onClose();
+        }, 600);
+      } catch (err: any) {
+        console.error('Sign up error:', err);
+        setError(err.message || 'Failed to create account. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // 2. SIGN IN FLOW (Strict: do not allow login without a proper existing account)
+    try {
+      // Secret Admin shortcut check
+      if (userEmail === 'tobi@acourze.com') {
+        if (password !== '123456') {
+          setLoading(false);
+          setError('Incorrect password. Please verify your credentials.');
+          return;
+        }
+
+        const adminProfile: UserProfile = {
+          uid: 'user-tobi-admin',
+          email: 'tobi@acourze.com',
+          displayName: 'Tobi',
+          role: 'admin',
+          mfaEnabled: true,
+          preferences: {
+            currency: 'NGN',
+            emailNotifications: true,
+            smsNotifications: true,
+            whatsappAlerts: true,
+          },
+          addresses: [],
+          createdAt: '2025-01-10T08:30:00.000Z',
+        };
+
+        setPendingProfile(adminProfile);
+        setMode('mfa_challenge');
+        setLoading(false);
+        return;
+      }
+
+      // Check if user account actually exists
+      const existingUser = await findUserByEmail(userEmail);
+      if (!existingUser) {
+        setLoading(false);
+        setError('No account found with this email. Please click "Create Account" above to register first.');
+        return;
+      }
+
+      // Attempt authentication with Firebase Auth
+      let authenticatedUid = existingUser.uid;
+      try {
+        const res = await signInWithEmailAndPassword(auth, userEmail, password);
+        authenticatedUid = res.user.uid;
+      } catch (fbErr: any) {
+        console.warn('Firebase email sign-in notice:', fbErr);
+        // If wrong password
+        if (fbErr.code === 'auth/wrong-password' || fbErr.code === 'auth/invalid-credential') {
+          setLoading(false);
+          setError('Incorrect password. Please verify your credentials or reset password.');
+          return;
+        }
+      }
+
+      const activeProfile: UserProfile = {
+        ...existingUser,
+        uid: authenticatedUid,
       };
 
-      setPendingProfile(adminProfile);
-      setMode('mfa_challenge');
+      if (activeProfile.mfaEnabled) {
+        setPendingProfile(activeProfile);
+        setMode('mfa_challenge');
+      } else {
+        onAuthSuccess(activeProfile);
+        onClose();
+      }
     } catch (err: any) {
-      console.error('Auth error:', err);
-      setError('Authentication failed. Please verify credentials.');
+      console.error('Sign in error:', err);
+      setError(err.message || 'Authentication failed. Please verify your credentials.');
     } finally {
       setLoading(false);
     }
@@ -108,20 +200,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       const res = await signInWithPopup(auth, googleProvider);
       const user = res.user;
-      const userEmail = user.email?.toLowerCase();
+      const userEmail = (user.email || '').toLowerCase();
+      const isAdmin = userEmail === 'tobi@acourze.com';
 
-      // Only tobi@acourze.com is authorized
-      if (userEmail !== 'tobi@acourze.com') {
-        setError(`Access Denied: Account (${user.email}) is not authorized. Public registrations are closed.`);
-        setLoading(false);
-        return;
-      }
-
-      const profile: UserProfile = {
+      const existing = await findUserByEmail(userEmail);
+      const profile: UserProfile = existing || {
         uid: user.uid,
-        email: 'tobi@acourze.com',
-        displayName: user.displayName || 'Tobi',
-        role: 'admin',
+        email: userEmail,
+        displayName: user.displayName || userEmail.split('@')[0],
+        role: isAdmin ? 'admin' : 'customer',
         mfaEnabled: false,
         preferences: {
           currency: 'NGN',
@@ -133,6 +220,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         createdAt: new Date().toISOString(),
       };
 
+      await saveUserProfile(profile);
       onAuthSuccess(profile);
       onClose();
     } catch (err: any) {
@@ -146,7 +234,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleVerifyMfa = (e: React.FormEvent) => {
     e.preventDefault();
     if (!mfaCode || mfaCode.length < 4) {
-      setError('Please enter a valid 6-digit MFA security code');
+      setError('Please enter a valid 6-digit security code');
       return;
     }
 
@@ -165,7 +253,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <ShieldCheck className="w-5 h-5 text-sky-400" />
             <div>
               <h2 className="text-sm sm:text-base font-black uppercase tracking-tight">
-                {mode === 'signin' ? 'Approved Account Sign In' : 'Multi-Factor Verification'}
+                {mode === 'mfa_challenge'
+                  ? 'Two-Step Verification'
+                  : mode === 'signup'
+                  ? 'Create Customer Account'
+                  : 'Sign In to Your Account'}
               </h2>
               <p className="text-[10px] text-slate-400 font-medium">unit-world-sarl.com</p>
             </div>
@@ -178,37 +270,71 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
-        {/* Closed Signups Notice */}
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-start gap-2 text-[11px] text-amber-800">
-          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <span>
-            <strong>Public Registrations Disabled:</strong> New sign-ups are strictly closed. Only pre-approved administrative personnel (<span className="font-mono font-bold">tobi@acourze.com</span>) may log in.
-          </span>
-        </div>
+        {/* Tab Toggle: Sign In vs Create Account */}
+        {mode !== 'mfa_challenge' && (
+          <div className="grid grid-cols-2 border-b border-slate-200 bg-slate-50 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signin');
+                setError(null);
+              }}
+              className={`py-3 text-center transition-colors cursor-pointer border-b-2 ${
+                mode === 'signin'
+                  ? 'border-[#0284C7] text-[#0284C7] bg-white'
+                  : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signup');
+                setError(null);
+              }}
+              className={`py-3 text-center transition-colors cursor-pointer border-b-2 ${
+                mode === 'signup'
+                  ? 'border-[#0284C7] text-[#0284C7] bg-white'
+                  : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+        )}
 
         {/* Body */}
         <div className="p-5 sm:p-6 space-y-4">
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium">
-              {error}
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl font-medium flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{successMsg}</span>
             </div>
           )}
 
           {mode === 'mfa_challenge' ? (
             <form onSubmit={handleVerifyMfa} className="space-y-4">
-              <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-900">
+              <div className="p-3.5 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-900">
                 <p className="font-bold flex items-center gap-1.5 mb-1">
                   <Lock className="w-4 h-4 text-[#0284C7]" />
-                  Executive Security Verification
+                  Security Verification Active
                 </p>
                 <p className="text-[11px] text-slate-600">
-                  Welcome Tobi. Enter your 6-digit Authenticator passcode or passkey (e.g. <strong>123456</strong>) to verify session.
+                  Please enter the 6-digit verification code from your security authenticator or passkey.
                 </p>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Verification Code (MFA)
+                  Verification Passcode
                 </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -258,29 +384,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     d="M12 4.75c1.8 0 3.4.62 4.67 1.83l3.5-3.5C18.06 1.17 15.3 0 12 0 7.28 0 3.12 2.7 1.05 6.82l4.01 3.13c.98-2.94 3.71-5.2 6.94-5.2z"
                   />
                 </svg>
-                <span>Sign in with Google</span>
+                <span>Continue with Google</span>
               </button>
 
               <div className="relative flex items-center justify-center">
                 <div className="border-t border-slate-200 w-full" />
                 <span className="bg-white px-2 text-[11px] text-slate-400 uppercase font-semibold">
-                  Or with approved email
+                  Or with email
                 </span>
                 <div className="border-t border-slate-200 w-full" />
               </div>
 
               {/* Email Form */}
               <form onSubmit={handleEmailAuth} className="space-y-3">
+                {mode === 'signup' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Full Name *
+                    </label>
+                    <div className="relative">
+                      <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="John Doe"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-sky-500 font-medium"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Email Address
+                    Email Address *
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <input
                       type="email"
                       required
-                      placeholder="tobi@acourze.com"
+                      placeholder="name@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-sky-500 font-medium"
@@ -288,16 +433,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </div>
                 </div>
 
+                {mode === 'signup' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Phone Number (Optional)
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="tel"
+                        placeholder="+234 800 000 0000"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-sky-500 font-medium"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Password
+                    Password *
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <input
                       type="password"
                       required
-                      placeholder="123456"
+                      minLength={6}
+                      placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-sky-500 font-medium"
@@ -313,10 +477,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <span>Sign In</span>
+                    <span>{mode === 'signup' ? 'Create Customer Account' : 'Sign In'}</span>
                   )}
                 </button>
               </form>
+
+              {/* Mode switch helper text */}
+              <div className="text-center pt-1 border-t border-slate-100">
+                {mode === 'signin' ? (
+                  <p className="text-xs text-slate-500">
+                    Don't have an account yet?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('signup');
+                        setError(null);
+                      }}
+                      className="font-bold text-[#0284C7] hover:underline cursor-pointer"
+                    >
+                      Register here
+                    </button>
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('signin');
+                        setError(null);
+                      }}
+                      className="font-bold text-[#0284C7] hover:underline cursor-pointer"
+                    >
+                      Sign in here
+                    </button>
+                  </p>
+                )}
+              </div>
             </>
           )}
         </div>

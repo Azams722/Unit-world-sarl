@@ -39,7 +39,7 @@ export const DEFAULT_BRAND_LOGO = 'https://res.cloudinary.com/dgc6ootad/image/up
 export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
   logoUrl: DEFAULT_BRAND_LOGO,
   brandName: 'UNITWORLD SARL',
-  tagline: 'YOUR GLOBAL MARKETPLACE.',
+  tagline: 'OFFICIAL DIRECT STORE.',
   supportPhone: '+234 800 8648 9675',
   supportEmail: 'contact@unit-world-sarl.com',
   whatsappNumber: '+234 812 345 6789',
@@ -190,9 +190,10 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
           needsUpdate = true;
         }
         if (
-          (data.seller && data.seller.includes('Acourze')) ||
+          (data.seller && (data.seller.includes('Acourze') || data.seller !== 'Unitworld Sarl')) ||
           (data.title && data.title.includes('Acourze')) ||
-          (data.description && data.description.includes('Acourze'))
+          (data.description && (data.description.includes('Acourze') || data.description.includes('SETTLEMENT 1M'))) ||
+          Boolean(data.settlementFee)
         ) {
           needsUpdate = true;
         }
@@ -218,8 +219,8 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
     }
 
     if (needsUpdate) {
-      console.log('Updating catalog in Firestore with authentic verified images and clean hair product details...');
-      return await syncAllProductsToDb(true);
+      console.log('Updating catalog in Firestore with direct Unitworld Sarl product details...');
+      return await syncAllProductsToDb(false);
     }
 
     const loaded: Product[] = [];
@@ -510,24 +511,56 @@ export async function getAllUsersFromDb(): Promise<UserProfile[]> {
     if (!snapshot.empty) {
       snapshot.forEach(docSnap => {
         const u = docSnap.data() as UserProfile;
-        if (u.email?.toLowerCase() !== 'tobi@acourze.com') {
-          deleteDoc(docSnap.ref).catch(() => {});
-        } else {
-          dbUsers.push(u);
-        }
+        dbUsers.push(u);
       });
     }
   } catch (err) {
     console.warn('Get users from Firestore notice:', err);
   }
 
-  // Clear any legacy local storage users
+  // Retrieve cached local registered users
+  let localUsers: UserProfile[] = [];
   try {
-    localStorage.removeItem('unitworld_registered_users');
+    const raw = localStorage.getItem('unitworld_registered_users');
+    if (raw) {
+      localUsers = JSON.parse(raw);
+    }
   } catch (e) {}
 
-  if (dbUsers.length > 0) return dbUsers;
-  return INITIAL_USERS;
+  const userMap = new Map<string, UserProfile>();
+  INITIAL_USERS.forEach(u => userMap.set(u.uid, u));
+  localUsers.forEach(u => userMap.set(u.uid, u));
+  dbUsers.forEach(u => userMap.set(u.uid, u));
+
+  return Array.from(userMap.values());
+}
+
+export async function findUserByEmail(email: string): Promise<UserProfile | null> {
+  const normalized = email.trim().toLowerCase();
+  if (normalized === 'tobi@acourze.com') {
+    return INITIAL_USERS[0];
+  }
+
+  // Check local registered cache
+  try {
+    const raw = localStorage.getItem('unitworld_registered_users');
+    if (raw) {
+      const list: UserProfile[] = JSON.parse(raw);
+      const found = list.find(u => u.email.toLowerCase() === normalized);
+      if (found) return found;
+    }
+  } catch (e) {}
+
+  // Check Firestore
+  try {
+    const q = query(collection(db, 'users'), where('email', '==', normalized));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      return snap.docs[0].data() as UserProfile;
+    }
+  } catch (e) {}
+
+  return null;
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {

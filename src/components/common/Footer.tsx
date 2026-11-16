@@ -19,8 +19,8 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin, onOpenRefu
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-bold text-white uppercase tracking-wider text-[11px]">100% Quality & Protection</p>
-              <p className="text-slate-400 text-[11px] mt-0.5">Physical inspection on delivery</p>
+              <p className="font-bold text-white uppercase tracking-wider text-[11px]">100% Direct Store Quality</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">Owned & sold directly by Unitworld Sarl</p>
             </div>
           </div>
 
@@ -63,7 +63,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin, onOpenRefu
           <div className="space-y-3">
             <UnitworldLogo logoUrl={logoUrl} className="h-10" inverted={true} />
             <p className="text-xs text-slate-400 leading-relaxed">
-              Unitworld Sarl is Africa's trusted global marketplace and automotive dealership network. Providing verified vehicles, designer fashion, mobile tech, and essential raw foods with integrated ERP logistics and direct settlement.
+              Unitworld Sarl is an official direct-to-consumer retail store and automotive dealership. We own and sell all listed vehicles, designer fashion, electronics, and essential groceries directly — no third-party sellers, no middlemen, and no escrow.
             </p>
             <p className="text-xs text-slate-400">
               Showrooms in Victoria Island, Ikeja GRA, and Igando, Lagos, Nigeria.
@@ -87,7 +87,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin, onOpenRefu
           {/* Department Categories */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">
-              Marketplace Departments
+              Store Departments
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
               <li><span className="hover:text-white transition-colors cursor-pointer">Fashion Hub (Flat ₦25,000 Sets)</span></li>
@@ -104,12 +104,12 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin, onOpenRefu
               Payment & Security
             </h4>
             <p className="text-xs text-slate-400 mb-3 leading-relaxed">
-              Online checkout gateway coming soon. Currently accepting direct verified transfers & doorstep verification.
+              All buyers make payments directly to Unitworld Sarl. We do not facilitate third-party selling, brokerage, or escrow services.
             </p>
             <div className="flex flex-wrap gap-2 text-[10px] font-bold font-mono mb-4">
               <span className="bg-slate-800 text-amber-400 px-2 py-1 rounded border border-slate-700">ONLINE GATEWAY (COMING SOON)</span>
-              <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">BANK TRANSFER</span>
-              <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">VERIFIED SETTLEMENT</span>
+              <span className="bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">DIRECT BANK TRANSFER</span>
+              <span className="bg-slate-800 text-emerald-300 px-2 py-1 rounded border border-slate-700">PAY UNITWORLD SARL DIRECTLY</span>
             </div>
             
             {onOpenRefundPolicy && (
@@ -126,7 +126,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin, onOpenRefu
 
         {/* Bottom Bar */}
         <div className="mt-10 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
-          <p>© {new Date().getFullYear()} Unitworld Sarl (<span className="font-mono text-slate-400">unit-world-sarl.com</span>). All rights reserved. Global Marketplace & ERP.</p>
+          <p>© {new Date().getFullYear()} Unitworld Sarl (<span className="font-mono text-slate-400">unit-world-sarl.com</span>). All rights reserved. Official Direct Store & ERP.</p>
           <div className="flex flex-wrap items-center gap-4 text-slate-400">
             <span>Privacy Policy</span>
             <span>·</span>

@@ -158,9 +158,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] text-slate-500 bg-emerald-50 text-emerald-800 p-2 rounded-lg border border-emerald-200">
+            <div className="flex items-center gap-2 text-[11px] bg-emerald-50 text-emerald-800 p-2 rounded-lg border border-emerald-200">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Unitworld Verified Buyer Protection & Secure Order</span>
+              <span>Sold directly by Unitworld Sarl • Direct Payment (No Escrow)</span>
             </div>
 
             <button

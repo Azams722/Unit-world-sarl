@@ -131,7 +131,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({
       sku: product.sku || product.id,
       brand: {
         '@type': 'Brand',
-        name: product.brand || product.seller || 'Luxury Human Hair'
+        name: product.brand || 'Unitworld Sarl'
       },
       offers: {
         '@type': 'Offer',
@@ -142,7 +142,7 @@ export const ProductPage: React.FC<ProductPageProps> = ({
         availability: (product.stock ?? 1) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
         seller: {
           '@type': 'Organization',
-          name: product.seller || 'Unitworld Sarl Global Commerce'
+          name: 'Unitworld Sarl'
         }
       }
     };
@@ -218,7 +218,7 @@ Please provide ordering, inspection and delivery confirmation.`
               className="flex items-center gap-1.5 font-bold text-slate-700 hover:text-[#0284C7] transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Marketplace</span>
+              <span>Back to Store</span>
             </button>
             <span className="text-slate-300">/</span>
             <span className="font-semibold text-slate-600">{product.category}</span>
@@ -266,7 +266,7 @@ Please provide ordering, inspection and delivery confirmation.`
                   <Sparkles className="w-10 h-10 text-amber-400" />
                   <h3 className="font-playfair text-lg font-bold">{product.title}</h3>
                   <p className="text-xs text-slate-300 max-w-sm">
-                    Unitworld Sarl Official Marketplace Listing
+                    Unitworld Sarl Official Direct Store Listing
                   </p>
                 </div>
               )}
@@ -300,7 +300,7 @@ Please provide ordering, inspection and delivery confirmation.`
                 )}
                 {product.settlementFee && (
                   <span className="bg-amber-500 text-slate-950 text-xs font-black px-3 py-1 rounded shadow">
-                    Settlement {product.settlementFee}
+                    {product.settlementFee}
                   </span>
                 )}
               </div>
@@ -432,12 +432,12 @@ Please provide ordering, inspection and delivery confirmation.`
                 <p>{product.description}</p>
               </div>
 
-              {/* Seller / Brand Info */}
+              {/* Direct Store Info */}
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase">Seller / Merchant</span>
+                  <span className="text-slate-400 text-[10px] font-bold uppercase">Sold &amp; Fulfilled Directly By</span>
                   <p className="font-bold text-slate-900 flex items-center gap-1">
-                    <span>{product.seller || 'Luxury Human Hair Studio'}</span>
+                    <span>Unitworld Sarl (Direct Store)</span>
                     <Award className="w-3.5 h-3.5 text-sky-600" />
                   </p>
                   <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
@@ -450,7 +450,7 @@ Please provide ordering, inspection and delivery confirmation.`
                   className="py-1.5 px-3 bg-white border border-slate-300 hover:border-emerald-500 text-slate-700 hover:text-emerald-700 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
                 >
                   <MessageSquareQuote className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Chat Vendor</span>
+                  <span>Chat Unitworld Sales</span>
                 </button>
               </div>
             </div>
@@ -514,7 +514,7 @@ Please provide ordering, inspection and delivery confirmation.`
                 </div>
                 <div className="p-2 bg-slate-50 rounded-lg flex flex-col items-center">
                   <Lock className="w-4 h-4 text-sky-600 mb-1" />
-                  <span>Buyer Protected</span>
+                  <span>Pay Unitworld Direct</span>
                 </div>
                 <div className="p-2 bg-slate-50 rounded-lg flex flex-col items-center">
                   <Truck className="w-4 h-4 text-amber-600 mb-1" />

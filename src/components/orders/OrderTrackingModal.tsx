@@ -235,7 +235,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
 
                 <div className="sm:text-right space-y-1">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Settlement Summary
+                    Payment Summary
                   </span>
                   <div className="flex justify-between sm:justify-end gap-4 text-slate-600">
                     <span>Payment Gateway:</span>

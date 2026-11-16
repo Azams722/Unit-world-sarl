@@ -54,7 +54,7 @@ export const RefundPolicyModal: React.FC<RefundPolicyModalProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Unitworld Sarl Global Commerce & Dealership Network • Effective 2025/2026
+                Unitworld Sarl Official Direct Store & Dealership • Effective 2025/2026
               </p>
             </div>
           </div>
@@ -208,17 +208,17 @@ export const RefundPolicyModal: React.FC<RefundPolicyModalProps> = ({
               <li><strong>Do Not Accept or Sign:</strong> Reject the parcel immediately and write "Damaged / Incorrect Item" on the dispatch manifest.</li>
               <li><strong>Photographic Proof:</strong> Take high-resolution photos and an unboxing video displaying the courier tracking slip and the defect clearly.</li>
               <li><strong>Notify Within 24 Hours:</strong> Submit your claim along with your Order ID to our VIP resolution desk at <span className="font-mono font-bold text-sky-700">support@unit-world-sarl.com</span> or via WhatsApp.</li>
-              <li><strong>Remedy:</strong> Following verification, Unitworld will issue an immediate replacement shipment at zero additional courier cost, or offer merchant store credit.</li>
+              <li><strong>Remedy:</strong> Following verification, Unitworld will issue an immediate replacement shipment at zero additional courier cost, or offer Unitworld store credit.</li>
             </ol>
           </div>
 
           {/* Section 5: Legal & Regulatory Framework */}
           <div className="p-4 bg-slate-100 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1.5">
             <p className="font-bold text-slate-800">
-              Regulatory Jurisdiction & Merchant Governance
+              Regulatory Jurisdiction & Direct Retail Terms
             </p>
             <p>
-              This policy is executed in conformity with the Federal Competition and Consumer Protection Act (FCCPA) and Nigerian Commercial Sales of Goods Laws. Unitworld Sarl maintains full corporate registration in Lagos, Nigeria and international trading jurisdictions.
+              Unitworld Sarl operates exclusively as a direct retailer and dealership selling its own inventory. All buyer payments are made directly to Unitworld Sarl; we do not sell on behalf of third-party vendors and do not provide escrow or intermediary services. This policy is executed in conformity with the Federal Competition and Consumer Protection Act (FCCPA) and Nigerian Commercial Sales of Goods Laws.
             </p>
           </div>
 

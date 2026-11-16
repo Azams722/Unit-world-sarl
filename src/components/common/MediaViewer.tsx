@@ -119,7 +119,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
         className={`flex flex-col items-center justify-center bg-slate-900 text-slate-400 p-4 select-none ${className}`}
       >
         <ImageIcon className="w-8 h-8 text-sky-400 mb-1" />
-        <span className="text-[11px] font-bold text-slate-300 text-center tracking-wide">{alt || 'Unitworld Marketplace'}</span>
+        <span className="text-[11px] font-bold text-slate-300 text-center tracking-wide">{alt || 'Unitworld Sarl Direct Store'}</span>
       </div>
     );
   }

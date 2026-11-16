@@ -26,7 +26,7 @@ export const UnitworldLogo: React.FC<LogoProps> = ({
       <div className={`flex items-center select-none ${className}`}>
         <img
           src={logoUrl}
-          alt="Unitworld Sarl - Your Global Marketplace"
+          alt="Unitworld Sarl - Official Direct Store"
           onError={() => setImgError(true)}
           className={`h-full w-auto object-contain max-h-14 drop-shadow-2xs transition-all ${
             inverted ? 'bg-white/95 p-1 rounded-lg shadow-sm' : ''
@@ -120,7 +120,7 @@ export const UnitworldLogo: React.FC<LogoProps> = ({
                 inverted ? 'text-slate-300' : 'text-slate-800'
               }`}
             >
-              YOUR GLOBAL MARKETPLACE.
+              OFFICIAL DIRECT STORE.
             </span>
           </div>
         )}

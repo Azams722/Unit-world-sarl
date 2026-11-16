@@ -49,7 +49,7 @@ import { Product, Order, GatewaySettings, BrandSettings, OrderStatus, AdminUser,
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { CATEGORIES } from '../../data/initialProducts';
 import { UnitworldLogo } from '../common/UnitworldLogo';
-import { DEFAULT_BRAND_LOGO } from '../../firebase';
+import { DEFAULT_BRAND_LOGO, findUserByEmail, saveUserProfile } from '../../firebase';
 import { processMediaFile } from '../../utils/mediaStorage';
 import { MediaViewer } from '../common/MediaViewer';
 import { MediaUploaderModal } from './MediaUploaderModal';
@@ -172,7 +172,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [formStock, setFormStock] = useState<number>(1);
   const [formCondition, setFormCondition] = useState<string>('Registered');
   const [formDescription, setFormDescription] = useState('');
-  const [formSeller, setFormSeller] = useState('Unitworld Direct');
+  const [formSeller, setFormSeller] = useState('Unitworld Sarl');
   const [formLocation, setFormLocation] = useState('Victoria Island, Lagos');
   const [formSettlement, setFormSettlement] = useState('');
   const [formBrand, setFormBrand] = useState('');
@@ -231,54 +231,149 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [adminLoginPassword, setAdminLoginPassword] = useState('');
   const [adminLoginError, setAdminLoginError] = useState<string | null>(null);
   const [adminLoginLoading, setAdminLoginLoading] = useState(false);
+  const [adminAuthMode, setAdminAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [adminSignupName, setAdminSignupName] = useState('');
+  const [adminSignupPhone, setAdminSignupPhone] = useState('');
+  const [adminAuthSuccessMsg, setAdminAuthSuccessMsg] = useState<string | null>(null);
 
-  const handleAdminLoginSubmit = (e: React.FormEvent) => {
+  const handleAdminLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdminLoginLoading(true);
     setAdminLoginError(null);
+    setAdminAuthSuccessMsg(null);
 
     const emailTrimmed = adminLoginEmail.trim().toLowerCase();
-    if (emailTrimmed !== 'tobi@acourze.com') {
-      setAdminLoginLoading(false);
-      setAdminLoginError('Access Denied: Account not found. User registrations are permanently closed. Only approved administrator (tobi@acourze.com) is authorized.');
-      return;
-    }
 
-    if (adminLoginPassword !== '123456') {
-      setAdminLoginLoading(false);
-      setAdminLoginError('Invalid password. Please enter the authorized password for tobi@acourze.com.');
-      return;
-    }
+    // 1. Sign Up Flow
+    if (adminAuthMode === 'signup') {
+      if (!adminSignupName.trim()) {
+        setAdminLoginLoading(false);
+        setAdminLoginError('Please enter your full name.');
+        return;
+      }
+      if (!emailTrimmed) {
+        setAdminLoginLoading(false);
+        setAdminLoginError('Please enter a valid email address.');
+        return;
+      }
+      if (adminLoginPassword.length < 6) {
+        setAdminLoginLoading(false);
+        setAdminLoginError('Password must be at least 6 characters.');
+        return;
+      }
 
-    const adminProfile: UserProfile = {
-      uid: 'user-tobi-admin',
-      email: 'tobi@acourze.com',
-      displayName: 'Tobi',
-      role: 'admin',
-      mfaEnabled: true,
-      preferences: {
-        currency: 'NGN',
-        emailNotifications: true,
-        smsNotifications: true,
-        whatsappAlerts: true,
-      },
-      addresses: [
-        {
-          id: 'addr-1',
-          fullName: 'Tobi',
-          phone: '+234 800 8648 967',
-          street: '14B Admiralty Way, Lekki Phase 1',
-          city: 'Lagos',
-          state: 'Lagos State',
-          isDefault: true
+      try {
+        const existing = await findUserByEmail(emailTrimmed);
+        if (existing) {
+          setAdminLoginLoading(false);
+          setAdminLoginError('An account with this email address already exists. Please switch to Sign In.');
+          return;
         }
-      ],
-      createdAt: '2025-01-10T08:30:00.000Z',
-    };
 
-    setAdminLoginLoading(false);
-    if (onAdminLoginSuccess) {
-      onAdminLoginSuccess(adminProfile);
+        const isAdmin = emailTrimmed === 'tobi@acourze.com';
+        const newProfile: UserProfile = {
+          uid: `usr-${Date.now()}`,
+          email: emailTrimmed,
+          displayName: adminSignupName.trim(),
+          phone: adminSignupPhone.trim() || undefined,
+          role: isAdmin ? 'admin' : 'customer',
+          mfaEnabled: isAdmin,
+          preferences: {
+            currency: 'NGN',
+            emailNotifications: true,
+            smsNotifications: true,
+            whatsappAlerts: true,
+          },
+          addresses: [],
+          createdAt: new Date().toISOString(),
+        };
+
+        await saveUserProfile(newProfile);
+        setAdminLoginLoading(false);
+        setAdminAuthSuccessMsg('Account registered successfully! You can now sign in.');
+        setAdminAuthMode('signin');
+      } catch (err: any) {
+        setAdminLoginLoading(false);
+        setAdminLoginError(err.message || 'Failed to register account. Please try again.');
+      }
+      return;
+    }
+
+    // 2. Sign In Flow
+    if (!emailTrimmed) {
+      setAdminLoginLoading(false);
+      setAdminLoginError('Please enter your email address.');
+      return;
+    }
+    if (!adminLoginPassword) {
+      setAdminLoginLoading(false);
+      setAdminLoginError('Please enter your password.');
+      return;
+    }
+
+    // Silent Admin Credentials
+    if (emailTrimmed === 'tobi@acourze.com') {
+      if (adminLoginPassword !== '123456') {
+        setAdminLoginLoading(false);
+        setAdminLoginError('Incorrect password. Please verify your credentials.');
+        return;
+      }
+
+      const adminProfile: UserProfile = {
+        uid: 'user-tobi-admin',
+        email: 'tobi@acourze.com',
+        displayName: 'Executive Administrator',
+        role: 'admin',
+        mfaEnabled: true,
+        preferences: {
+          currency: 'NGN',
+          emailNotifications: true,
+          smsNotifications: true,
+          whatsappAlerts: true,
+        },
+        addresses: [
+          {
+            id: 'addr-1',
+            fullName: 'Unitworld Operations',
+            phone: '+234 800 8648 967',
+            street: '14B Admiralty Way, Lekki Phase 1',
+            city: 'Lagos',
+            state: 'Lagos State',
+            isDefault: true
+          }
+        ],
+        createdAt: '2025-01-10T08:30:00.000Z',
+      };
+
+      setAdminLoginLoading(false);
+      if (onAdminLoginSuccess) {
+        onAdminLoginSuccess(adminProfile);
+      }
+      return;
+    }
+
+    // Validate against existing registered accounts
+    try {
+      const existingUser = await findUserByEmail(emailTrimmed);
+      if (!existingUser) {
+        setAdminLoginLoading(false);
+        setAdminLoginError('No account found with this email. Please click "Create Account" above to register first.');
+        return;
+      }
+
+      if (existingUser.role !== 'admin') {
+        setAdminLoginLoading(false);
+        setAdminLoginError('This account does not have administrator privileges. Please sign in with an executive administrator account.');
+        return;
+      }
+
+      setAdminLoginLoading(false);
+      if (onAdminLoginSuccess) {
+        onAdminLoginSuccess(existingUser);
+      }
+    } catch (err: any) {
+      setAdminLoginLoading(false);
+      setAdminLoginError(err.message || 'Authentication failed. Please verify your credentials.');
     }
   };
 
@@ -692,131 +787,218 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     return matchesSearch && matchesCat;
   });
 
-  // Check if current user is the approved super admin
-  const isSuperAdmin = currentUser?.email?.toLowerCase() === 'tobi@acourze.com' && currentUser?.role === 'admin';
+  // Check if current user has approved administrative access
+  const isSuperAdmin = (currentUser?.email?.toLowerCase() === 'tobi@acourze.com' || currentUser?.role === 'admin');
 
   if (!isSuperAdmin) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-8 font-sans">
+      <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col justify-between p-4 sm:p-8 font-sans">
         {/* Top bar */}
-        <div className="max-w-4xl mx-auto w-full flex items-center justify-between py-4 border-b border-slate-800">
+        <div className="max-w-4xl mx-auto w-full flex items-center justify-between py-4 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white font-black flex items-center justify-center shadow-lg shadow-sky-500/20 text-sm">
+            <div className="w-10 h-10 rounded-xl bg-[#0284C7] text-white font-black flex items-center justify-center shadow-md shadow-sky-500/20 text-sm">
               ERP
             </div>
             <div>
-              <h1 className="text-sm sm:text-base font-black tracking-tight flex items-center gap-2 text-white">
+              <h1 className="text-sm sm:text-base font-black tracking-tight flex items-center gap-2 text-slate-900">
                 <span>UNITWORLD SARL</span>
-                <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-400/30 px-2 py-0.5 rounded-full font-bold font-mono">
+                <span className="text-[10px] bg-sky-100 text-[#0284C7] border border-sky-300 px-2 py-0.5 rounded-full font-bold font-mono">
                   unit-world-sarl.com
                 </span>
               </h1>
-              <p className="text-[11px] text-slate-400">Executive Management & Administration Dashboard</p>
+              <p className="text-[11px] text-slate-500">Executive Management & Administration Dashboard</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-800 transition-colors cursor-pointer"
+            className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-slate-950 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 shadow-2xs transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Return to Storefront</span>
           </button>
         </div>
 
-        {/* Center Auth Card */}
-        <div className="max-w-md mx-auto w-full my-8 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="text-center space-y-2 mb-6">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center shadow-inner">
-              <ShieldCheck className="w-7 h-7" />
-            </div>
-            <h2 className="text-xl font-black text-white tracking-tight">Executive Admin Authentication</h2>
-            <p className="text-xs text-slate-400">
-              Restricted to authorized executive administrators only.
-            </p>
-          </div>
-
-          <div className="mb-5 p-3.5 bg-amber-500/10 border border-amber-500/25 rounded-2xl text-[11px] text-amber-300 leading-relaxed">
-            <p className="font-bold flex items-center gap-1.5 mb-0.5">
-              <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              Public Registrations Disabled
-            </p>
-            Sign-up access is closed. If an account does not exist, access is strictly prohibited. Only the approved administrator (<span className="font-mono font-bold text-white">tobi@acourze.com</span>) is granted entry.
-          </div>
-
-          {adminLoginError && (
-            <div className="mb-4 p-3.5 bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs rounded-xl font-medium flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <span>{adminLoginError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleAdminLoginSubmit} className="space-y-4 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-300 mb-1.5">
-                Administrator Email
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  required
-                  placeholder="tobi@acourze.com"
-                  value={adminLoginEmail}
-                  onChange={(e) => {
-                    setAdminLoginEmail(e.target.value);
-                    if (adminLoginError) setAdminLoginError(null);
-                  }}
-                  className="w-full bg-slate-950/70 border border-slate-800 text-white pl-10 pr-3.5 py-3 rounded-xl focus:outline-none focus:border-sky-500 font-medium text-xs placeholder:text-slate-600"
-                />
+        {/* Center Auth Card - Standard Clean Sign In Experience */}
+        <div className="max-w-md mx-auto w-full my-8 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-sky-400" />
+              <div>
+                <h2 className="text-sm sm:text-base font-black uppercase tracking-tight">
+                  {adminAuthMode === 'signup' ? 'Create Customer Account' : 'Sign In to Unitworld'}
+                </h2>
+                <p className="text-[10px] text-slate-400 font-medium">unit-world-sarl.com • Secure Access</p>
               </div>
             </div>
+          </div>
 
-            <div>
-              <label className="block font-semibold text-slate-300 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  required
-                  placeholder="123456"
-                  value={adminLoginPassword}
-                  onChange={(e) => {
-                    setAdminLoginPassword(e.target.value);
-                    if (adminLoginError) setAdminLoginError(null);
-                  }}
-                  className="w-full bg-slate-950/70 border border-slate-800 text-white pl-10 pr-3.5 py-3 rounded-xl focus:outline-none focus:border-sky-500 font-medium text-xs placeholder:text-slate-600"
-                />
+          {/* Tab Toggle: Sign In vs Create Account */}
+          <div className="grid grid-cols-2 border-b border-slate-200 bg-slate-50 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => {
+                setAdminAuthMode('signin');
+                setAdminLoginError(null);
+                setAdminAuthSuccessMsg(null);
+              }}
+              className={`py-3 text-center transition-colors cursor-pointer border-b-2 ${
+                adminAuthMode === 'signin'
+                  ? 'border-[#0284C7] text-[#0284C7] bg-white'
+                  : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAdminAuthMode('signup');
+                setAdminLoginError(null);
+                setAdminAuthSuccessMsg(null);
+              }}
+              className={`py-3 text-center transition-colors cursor-pointer border-b-2 ${
+                adminAuthMode === 'signup'
+                  ? 'border-[#0284C7] text-[#0284C7] bg-white'
+                  : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+
+          {/* Form Body */}
+          <div className="p-5 sm:p-6 space-y-4">
+            {adminLoginError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                <span>{adminLoginError}</span>
               </div>
+            )}
+
+            {adminAuthSuccessMsg && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{adminAuthSuccessMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAdminLoginSubmit} className="space-y-3.5 text-xs">
+              {adminAuthMode === 'signup' && (
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Full Name *
+                  </label>
+                  <div className="relative">
+                    <UserCheck className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Samuel Adekunle"
+                      value={adminSignupName}
+                      onChange={(e) => {
+                        setAdminSignupName(e.target.value);
+                        if (adminLoginError) setAdminLoginError(null);
+                      }}
+                      className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-sky-500 font-medium"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Email Address *
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="name@unit-world-sarl.com"
+                    value={adminLoginEmail}
+                    onChange={(e) => {
+                      setAdminLoginEmail(e.target.value);
+                      if (adminLoginError) setAdminLoginError(null);
+                    }}
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-sky-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              {adminAuthMode === 'signup' && (
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Phone Number (Optional)
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="tel"
+                      placeholder="+234 800 000 0000"
+                      value={adminSignupPhone}
+                      onChange={(e) => {
+                        setAdminSignupPhone(e.target.value);
+                        if (adminLoginError) setAdminLoginError(null);
+                      }}
+                      className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-sky-500 font-medium"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Password *
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                    value={adminLoginPassword}
+                    onChange={(e) => {
+                      setAdminLoginPassword(e.target.value);
+                      if (adminLoginError) setAdminLoginError(null);
+                    }}
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-sky-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={adminLoginLoading}
+                className="w-full py-2.5 bg-[#0284C7] hover:bg-[#0369a1] text-white font-bold rounded-xl text-xs shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>
+                  {adminLoginLoading
+                    ? 'Processing...'
+                    : adminAuthMode === 'signup'
+                    ? 'Create Customer Account'
+                    : 'Sign In to Account'}
+                </span>
+              </button>
+            </form>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+              <button
+                onClick={onClose}
+                className="text-xs text-slate-500 hover:text-sky-600 font-medium transition-colors cursor-pointer"
+              >
+                ← Return to Official Storefront
+              </button>
             </div>
-
-            <button
-              type="submit"
-              disabled={adminLoginLoading}
-              className="w-full py-3 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-sky-500/20 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Sign In to Executive Dashboard</span>
-            </button>
-          </form>
-
-          <div className="mt-6 pt-5 border-t border-slate-800 text-center">
-            <button
-              onClick={onClose}
-              className="text-xs text-slate-400 hover:text-sky-400 font-medium transition-colors cursor-pointer"
-            >
-              ← Back to Marketplace Storefront
-            </button>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="max-w-4xl mx-auto w-full py-4 text-center text-xs text-slate-500 border-t border-slate-900">
-          Unitworld Sarl © 2026 • Official Executive Console • <span className="font-mono text-slate-400">unit-world-sarl.com</span>
+        <div className="max-w-4xl mx-auto w-full py-4 text-center text-xs text-slate-500 border-t border-slate-200">
+          Unitworld Sarl © 2026 • Official Executive Console • <span className="font-mono text-slate-600">unit-world-sarl.com</span>
         </div>
       </div>
     );
@@ -853,14 +1035,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             <div className="hidden sm:flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-xl text-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span className="font-medium text-slate-300">
-                Admin: <strong className="text-white">tobi@acourze.com</strong>
+                Admin: <strong className="text-white">{currentUser?.displayName || currentUser?.email || 'Executive Admin'}</strong>
               </span>
             </div>
 
             <button
               onClick={onClose}
               className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer border border-slate-700 shadow-xs"
-              title="Return to Marketplace Storefront"
+              title="Return to Official Storefront"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Return to Store</span>
@@ -1180,7 +1362,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           <span>Current Product Gallery ({currentSelectedProduct.images?.length || 0} Photos, {currentSelectedProduct.videos?.length || 0} Videos)</span>
                         </h4>
                         <span className="text-[11px] text-slate-500">
-                          Photo #1 is the Primary Cover display shown on marketplace cards.
+                          Photo #1 is the Primary Cover display shown on store product cards.
                         </span>
                       </div>
 
@@ -1311,9 +1493,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           { key: 'condition', label: 'Item Condition' },
                           { key: 'stock', label: 'Stock Quantity' },
                           { key: 'sku', label: 'SKU Code' },
-                          { key: 'seller', label: 'Merchant / Seller' },
+                          { key: 'seller', label: 'Direct Seller Label' },
                           { key: 'location', label: 'Inspection Hub / Location' },
-                          { key: 'settlementFee', label: 'Settlement Fee' },
+                          { key: 'settlementFee', label: 'Handling / Docs Badge' },
                           { key: 'brand', label: 'Brand / Manufacturer' },
                           { key: 'warranty', label: 'Warranty Policy' },
                           { key: 'rating', label: 'Star Rating & Reviews' },
@@ -1594,7 +1776,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-4">
                       <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5 pb-2 border-b border-slate-200">
                         <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                        2. Pricing, Strike-Through & Settlement Fee (Edit & Omit)
+                        2. Pricing, Strike-Through &amp; Docs Badge (Edit &amp; Omit)
                       </span>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1643,19 +1825,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           )}
                         </div>
 
-                        {/* Settlement Fee (Omittable) */}
+                        {/* Handling / Docs Badge (Omittable) */}
                         <div>
                           {isOmitted('settlementFee') ? (
                             <div className="p-2.5 bg-slate-100 rounded-lg border border-dashed border-slate-300 h-full flex flex-col justify-center items-center text-center">
-                              <span className="text-slate-400 italic mb-1">Settlement fee omitted</span>
+                              <span className="text-slate-400 italic mb-1">Badge omitted</span>
                               <button type="button" onClick={() => toggleOmitField('settlementFee')} className="text-sky-600 font-bold hover:underline">
-                                + Include Settlement Fee
+                                + Include Docs Badge
                               </button>
                             </div>
                           ) : (
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="font-semibold text-slate-700">Broker Direct Settlement Fee</label>
+                                <label className="font-semibold text-slate-700">Handling / Docs Note (Optional)</label>
                                 <button type="button" onClick={() => toggleOmitField('settlementFee')} className="text-rose-600 hover:text-rose-800 text-[10px] font-bold">
                                   Omit
                                 </button>
@@ -1664,21 +1846,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                 type="text"
                                 value={formSettlement}
                                 onChange={(e) => setFormSettlement(e.target.value)}
-                                placeholder="e.g. ₦1,000,000 Settlement"
+                                placeholder="e.g. Customs Papers Ready"
                                 className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs"
                               />
-                              <p className="text-[10px] text-slate-500 mt-1">Special badge for high-ticket vehicle deals</p>
+                              <p className="text-[10px] text-slate-500 mt-1">Optional badge for direct Unitworld Sarl listings</p>
                             </div>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    {/* CARD 3: BRAND, SELLER & LOCATION */}
+                    {/* CARD 3: BRAND, DIRECT STORE ORIGIN & LOCATION */}
                     <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-4">
                       <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5 pb-2 border-b border-slate-200">
                         <Building className="w-3.5 h-3.5 text-amber-600" />
-                        3. Merchant, Brand & Location (Edit & Omit)
+                        3. Direct Store Origin, Brand & Location (Edit & Omit)
                       </span>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1686,7 +1868,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         <div>
                           {isOmitted('seller') ? (
                             <div className="p-2.5 bg-slate-100 rounded-lg border border-dashed border-slate-300 flex items-center justify-between">
-                              <span className="text-slate-400 italic">Seller omitted</span>
+                              <span className="text-slate-400 italic">Direct seller omitted</span>
                               <button type="button" onClick={() => toggleOmitField('seller')} className="text-sky-600 font-bold hover:underline">
                                 + Include
                               </button>
@@ -1694,7 +1876,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           ) : (
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="font-semibold text-slate-700">Merchant / Seller</label>
+                                <label className="font-semibold text-slate-700">Sold By (Direct Store)</label>
                                 <button type="button" onClick={() => toggleOmitField('seller')} className="text-rose-600 hover:text-rose-800 text-[10px] font-bold">
                                   Omit
                                 </button>
@@ -1703,7 +1885,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                 type="text"
                                 value={formSeller}
                                 onChange={(e) => setFormSeller(e.target.value)}
-                                placeholder="e.g. Unitworld Premium Motors"
+                                placeholder="Unitworld Sarl"
                                 className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs"
                               />
                             </div>
@@ -2326,7 +2508,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         required
                         value={newAdminEmail}
                         onChange={(e) => setNewAdminEmail(e.target.value)}
-                        placeholder="e.g. partner@unitworld.com"
+                        placeholder="e.g. staff@unit-world-sarl.com"
                         className="w-full p-2.5 border border-slate-300 rounded-lg font-mono focus:outline-none focus:border-sky-500"
                       />
                     </div>
@@ -2343,7 +2525,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         <option value="super_admin">Super Administrator (Full System Control)</option>
                         <option value="catalog_manager">Catalog & Product Manager (CRUD & Omit Fields)</option>
                         <option value="order_dispatcher">Logistics & Dispatch Officer (Orders)</option>
-                        <option value="inventory_controller">Direct Settlement & Inventory Controller</option>
+                        <option value="inventory_controller">Direct Payments & Inventory Controller</option>
                       </select>
                     </div>
 
@@ -3140,7 +3322,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       </div>
                       <div>
                         <label className="block font-semibold text-slate-700 mb-1">
-                          Official Settlement Notification Email
+                          Official Direct Payment Notification Email
                         </label>
                         <input
                           type="email"
@@ -3152,11 +3334,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     </div>
                   </div>
 
-                  {/* Section C: Corporate Settlement Bank Details */}
+                  {/* Section C: Unitworld Sarl Direct Corporate Bank Details */}
                   <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                       <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-                      3. Direct Wire & Corporate Settlement Account
+                      3. Unitworld Sarl Direct Corporate Bank Account
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -3195,7 +3377,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     className="w-full py-3.5 bg-[#0284C7] hover:bg-[#0369a1] text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm text-sm"
                   >
                     <Save className="w-4 h-4" />
-                    <span>Save Paystack Setup & Bank Settlement Settings to Firebase</span>
+                    <span>Save Paystack Setup & Direct Bank Settings to Firebase</span>
                   </button>
                 </form>
               </div>

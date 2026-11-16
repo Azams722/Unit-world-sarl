@@ -303,8 +303,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         {/* Step 2: Payment Gateway Selection */}
         {step === 'payment' && (
           <div className="p-5 sm:p-6 space-y-4">
+            <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 text-[11px] text-sky-900 leading-relaxed">
+              <strong className="block text-xs text-sky-950 mb-0.5">Direct Payment to Unitworld Sarl</strong>
+              All items are owned and sold directly by Unitworld Sarl. Payments are made directly to Unitworld Sarl — we do not facilitate third-party selling or operate an escrow service.
+            </div>
+
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-              Select Payment Gateway
+              Select Direct Payment Method
             </h3>
 
             <div className="space-y-3">
@@ -326,7 +331,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Debit/Credit card processing is currently undergoing regulatory & merchant onboarding review. Coming soon!
+                    Debit/Credit card processing is currently undergoing compliance review. Coming soon!
                   </p>
                 </div>
               </div>
@@ -349,10 +354,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <div className="flex-1">
                   <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-emerald-600" />
-                    Direct Bank Settlement / Wire Transfer
+                    Direct Bank Transfer to Unitworld Sarl
                   </span>
                   <p className="text-[11px] text-slate-600 mt-1">
-                    Ideal for vehicles and large corporate purchases. Wire funds directly to Unitworld GTBank Commercial Corporate Account.
+                    Pay directly into Unitworld Sarl's official GTBank corporate account. All payments go straight to Unitworld Sarl (no escrow or third-party intermediaries).
                   </p>
                   {paymentMethod === 'bank_transfer' && (
                     <div className="mt-2 p-2.5 bg-white border border-slate-200 rounded-lg text-xs space-y-1 font-mono">

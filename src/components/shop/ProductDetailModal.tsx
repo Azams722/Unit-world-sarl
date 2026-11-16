@@ -143,7 +143,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           {/* Modal Top Bar */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 bg-slate-50">
             <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
-              <span>Marketplace</span>
+              <span>Storefront</span>
               <span>/</span>
               <span className="font-semibold text-sky-700">{product.category}</span>
               {!isFieldOmitted('sku') && product.sku && (
@@ -229,7 +229,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     )}
                     {product.settlementFee && !isFieldOmitted('settlementFee') && (
                       <span className="bg-amber-500 text-slate-950 text-xs font-extrabold px-2.5 py-0.5 rounded shadow-sm">
-                        Settlement {product.settlementFee}
+                        {product.settlementFee}
                       </span>
                     )}
                   </div>
@@ -294,14 +294,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   )}
                 </div>
 
-                {/* Verified Inspection Guarantee */}
+                {/* Direct Sale Guarantee */}
                 <div className="mt-4 p-3.5 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2">
                   <div className="flex items-center gap-2 text-sky-900 font-bold text-xs">
                     <ShieldCheck className="w-4 h-4 text-[#0284C7]" />
-                    <span>Unitworld Buyer Protection & Verified Delivery</span>
+                    <span>Unitworld Sarl Direct Sale &amp; Payment</span>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Every product listed is verified by Unitworld Sarl logistics network. Direct purchase guarantee ensures orders are inspected and delivered in full compliance.
+                    Every item is owned, stocked, and sold directly by Unitworld Sarl — no third-party sellers and no escrow. All payments go directly to Unitworld Sarl.
                   </p>
                   {product.location && !isFieldOmitted('location') && (
                     <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium pt-1 border-t border-sky-100">
@@ -318,7 +318,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   {/* Seller / Rating Header (Only if NOT omitted) */}
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mb-1">
                     {!isFieldOmitted('seller') && product.seller && (
-                      <span className="font-bold text-[#0284C7]">{product.seller}</span>
+                      <span className="font-bold text-[#0284C7]">Sold directly by Unitworld Sarl</span>
                     )}
 
                     {!isFieldOmitted('brand') && product.brand && (
