@@ -353,16 +353,21 @@ export async function toggleAdminStatusInDb(adminId: string, isActive: boolean):
   }
 }
 
-// Helper to clean undefined fields and omitted fields before saving to Firestore
+// Helper to clean undefined fields, NaN values, and omitted fields before saving to Firestore
 export function cleanFirestoreData<T extends Record<string, any>>(obj: T): T {
-  const omittedSet = new Set<string>(obj.omittedFields || []);
+  const omittedSet = new Set<string>(Array.isArray(obj.omittedFields) ? obj.omittedFields : []);
   const result: any = {};
   for (const [key, value] of Object.entries(obj)) {
     if (omittedSet.has(key)) {
       continue; // completely omit from saved Firestore document
     }
     if (value !== undefined) {
-      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      if (typeof value === 'number' && Number.isNaN(value)) {
+        continue;
+      }
+      if (Array.isArray(value)) {
+        result[key] = value.filter((item) => item !== undefined && item !== null);
+      } else if (value !== null && typeof value === 'object') {
         result[key] = cleanFirestoreData(value);
       } else {
         result[key] = value;

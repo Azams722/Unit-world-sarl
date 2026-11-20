@@ -50,7 +50,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { CATEGORIES } from '../../data/initialProducts';
 import { UnitworldLogo } from '../common/UnitworldLogo';
 import { DEFAULT_BRAND_LOGO, findUserByEmail, saveUserProfile } from '../../firebase';
-import { processMediaFile } from '../../utils/mediaStorage';
+import { processMediaFile, recompressDataUrl } from '../../utils/mediaStorage';
 import { MediaViewer } from '../common/MediaViewer';
 import { MediaUploaderModal } from './MediaUploaderModal';
 
@@ -181,9 +181,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [formRating, setFormRating] = useState<number>(5.0);
   const [formReviewCount, setFormReviewCount] = useState<number>(1);
 
-  // Gallery images
+  // Gallery images & videos
   const [formImages, setFormImages] = useState<string[]>([]);
+  const [formVideos, setFormVideos] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isUploadingFormMedia, setIsUploadingFormMedia] = useState(false);
+  const [productFormError, setProductFormError] = useState<string | null>(null);
 
   // Tags
   const [formTags, setFormTags] = useState<string[]>([]);
@@ -479,21 +483,36 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    for (const file of Array.from(files)) {
-      try {
-        const processed = await processMediaFile(file);
-        if (processed && processed.url) {
-          setFormImages((prev) => prev.includes(processed.url) ? prev : [...prev, processed.url]);
+    setIsUploadingFormMedia(true);
+    setProductFormError(null);
+    try {
+      for (const file of Array.from(files)) {
+        try {
+          const processed = await processMediaFile(file);
+          if (processed && processed.url) {
+            if (processed.isVideo) {
+              setFormVideos((prev) => prev.includes(processed.url) ? prev : [...prev, processed.url]);
+            } else {
+              setFormImages((prev) => prev.includes(processed.url) ? prev : [...prev, processed.url]);
+            }
+          }
+        } catch (err: any) {
+          console.error('Failed to compress and process media:', err);
+          setProductFormError(err?.message || `Failed to process "${file.name}".`);
         }
-      } catch (err) {
-        console.error('Failed to compress and process image:', err);
       }
+    } finally {
+      setIsUploadingFormMedia(false);
+      e.target.value = '';
     }
-    e.target.value = '';
   };
 
   const handleRemoveImage = (index: number) => {
     setFormImages(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleRemoveVideo = (index: number) => {
+    setFormVideos(prev => prev.filter((_, idx) => idx !== index));
   };
 
   const handleSetPrimaryImage = (index: number) => {
@@ -582,6 +601,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   const handleStartCreate = () => {
     setEditingProduct(null);
+    setProductFormError(null);
     setFormTitle('');
     setFormCategory('Automobiles & Cars');
     setIsCustomCategory(false);
@@ -592,7 +612,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setFormStock(1);
     setFormCondition('Registered');
     setFormDescription('');
-    setFormSeller('Unitworld Direct Autos');
+    setFormSeller('Unitworld Sarl');
     setFormLocation('Victoria Island, Lagos');
     setFormSettlement('');
     setFormBrand('');
@@ -601,6 +621,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setFormRating(5.0);
     setFormReviewCount(1);
     setFormImages(['/assets/images/car_landcruiser_vxr_1790462842346.jpg']);
+    setFormVideos([]);
     setNewImageUrl('');
     setFormTags(['Verified', 'In Stock']);
     setNewTagInput('');
@@ -645,8 +666,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setFormRating(prod.rating ?? 5.0);
     setFormReviewCount(prod.reviewCount ?? 1);
 
-    // Images gallery
+    setProductFormError(null);
+
+    // Images & videos gallery
     setFormImages(prod.images && prod.images.length > 0 ? [...prod.images] : []);
+    setFormVideos(prod.videos && prod.videos.length > 0 ? [...prod.videos] : []);
     setNewImageUrl('');
 
     // Tags
@@ -687,76 +711,157 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   const handleSaveProductForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    const now = new Date().toISOString();
-    const finalCategory = isCustomCategory && formCustomCategory.trim() 
-      ? formCustomCategory.trim() 
+    if (isSavingProduct) return;
+
+    setProductFormError(null);
+
+    const trimmedTitle = formTitle.trim();
+    if (!trimmedTitle) {
+      setProductFormError('Please enter a Product Title before publishing.');
+      return;
+    }
+
+    const finalCategory = isCustomCategory
+      ? formCustomCategory.trim()
       : formCategory;
 
-    // Assemble specs record (omit empty rows)
-    const specsRecord: Record<string, string> = {};
-    if (!omittedFields.has('specs')) {
-      formSpecs.forEach(s => {
-        const k = s.key.trim();
-        const v = s.value.trim();
-        if (k && v) {
-          specsRecord[k] = v;
-        }
-      });
-      // also merge custom attributes
-      formCustomAttributes.forEach(a => {
-        const k = a.key.trim();
-        const v = a.value.trim();
-        if (k && v) {
-          specsRecord[k] = v;
-        }
-      });
+    if (!finalCategory) {
+      setProductFormError('Please enter a Custom Department Category name.');
+      return;
     }
 
-    const finalImages = formImages.length > 0 
-      ? formImages 
-      : ['/assets/images/hero_marketplace_banner.jpg'];
-
-    const omittedArray = Array.from(omittedFields);
-
-    const productPayload: Product = {
-      id: editingProduct ? editingProduct.id : `prod-${Date.now()}`,
-      title: formTitle.trim(),
-      category: finalCategory,
-      price: Number(formPrice),
-      images: finalImages,
-      omittedFields: omittedArray,
-
-      // Include or omit each field based on user's omission choice
-      sku: !omittedFields.has('sku') && formSku.trim() ? formSku.trim() : undefined,
-      originalPrice: !omittedFields.has('originalPrice') && Number(formOriginalPrice) > 0 ? Number(formOriginalPrice) : undefined,
-      stock: !omittedFields.has('stock') ? Number(formStock) : undefined,
-      condition: !omittedFields.has('condition') && formCondition ? formCondition : undefined,
-      description: !omittedFields.has('description') && formDescription.trim() ? formDescription.trim() : undefined,
-      seller: !omittedFields.has('seller') && formSeller.trim() ? formSeller.trim() : undefined,
-      location: !omittedFields.has('location') && formLocation.trim() ? formLocation.trim() : undefined,
-      settlementFee: !omittedFields.has('settlementFee') && formSettlement.trim() ? formSettlement.trim() : undefined,
-      brand: !omittedFields.has('brand') && formBrand.trim() ? formBrand.trim() : undefined,
-      warranty: !omittedFields.has('warranty') && formWarranty.trim() ? formWarranty.trim() : undefined,
-      featured: !omittedFields.has('featured') ? formFeatured : undefined,
-      rating: !omittedFields.has('rating') ? Number(formRating) : undefined,
-      reviewCount: !omittedFields.has('reviewCount') ? Number(formReviewCount) : undefined,
-      tags: !omittedFields.has('tags') && formTags.length > 0 ? formTags : undefined,
-      specs: !omittedFields.has('specs') && Object.keys(specsRecord).length > 0 ? specsRecord : undefined,
-
-      createdAt: editingProduct ? editingProduct.createdAt : now,
-      updatedAt: now,
-    };
-
-    if (editingProduct) {
-      await onUpdateProduct(editingProduct.id, productPayload);
-      setSyncSuccessMsg(`Product "${formTitle}" updated with full field modifications and omitted fields removed in Firestore!`);
-      setEditingProduct(null);
-    } else {
-      await onCreateProduct(productPayload);
-      setSyncSuccessMsg(`Product "${formTitle}" created and saved to Firestore database!`);
-      setIsCreatingProduct(false);
+    const parsedPrice = Number(formPrice);
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      setProductFormError('Please enter a valid Selling Price (0 or higher).');
+      return;
     }
-    setTimeout(() => setSyncSuccessMsg(''), 5000);
+
+    setIsSavingProduct(true);
+
+    try {
+      const now = new Date().toISOString();
+
+      // Assemble specs record (omit empty rows)
+      const specsRecord: Record<string, string> = {};
+      if (!omittedFields.has('specs')) {
+        formSpecs.forEach(s => {
+          const k = s.key.trim();
+          const v = s.value.trim();
+          if (k && v) {
+            specsRecord[k] = v;
+          }
+        });
+        formCustomAttributes.forEach(a => {
+          const k = a.key.trim();
+          const v = a.value.trim();
+          if (k && v) {
+            specsRecord[k] = v;
+          }
+        });
+      }
+
+      // Include any pending image URL or tag the user typed without clicking "+ Add"
+      const mergedImages = [...formImages];
+      const pendingImg = newImageUrl.trim();
+      if (pendingImg && !mergedImages.includes(pendingImg)) {
+        mergedImages.push(pendingImg);
+      }
+
+      let finalImages: string[] = mergedImages.length > 0
+        ? mergedImages.filter(img => !img.startsWith('idb:video:'))
+        : ['/assets/images/hero_marketplace_banner.jpg'];
+
+      const mergedVideos = [
+        ...formVideos,
+        ...mergedImages.filter(img => img.startsWith('idb:video:'))
+      ].filter((v, idx, arr) => arr.indexOf(v) === idx);
+
+      const mergedTags = [...formTags];
+      const pendingTag = newTagInput.trim();
+      if (pendingTag && !mergedTags.includes(pendingTag)) {
+        mergedTags.push(pendingTag);
+      }
+
+      const omittedArray = Array.from(omittedFields);
+
+      const buildPayload = (imgs: string[]): Product => ({
+        id: editingProduct ? editingProduct.id : `prod-${Date.now()}`,
+        title: trimmedTitle,
+        category: finalCategory,
+        price: parsedPrice,
+        images: imgs,
+        videos: mergedVideos.length > 0 ? mergedVideos : undefined,
+        omittedFields: omittedArray,
+
+        sku: !omittedFields.has('sku') && formSku.trim() ? formSku.trim() : undefined,
+        originalPrice: !omittedFields.has('originalPrice') && Number(formOriginalPrice) > 0 ? Number(formOriginalPrice) : undefined,
+        stock: !omittedFields.has('stock') ? (Number.isFinite(Number(formStock)) ? Math.max(0, Number(formStock)) : 0) : undefined,
+        condition: !omittedFields.has('condition') && formCondition ? formCondition : undefined,
+        description: !omittedFields.has('description') && formDescription.trim() ? formDescription.trim() : undefined,
+        seller: !omittedFields.has('seller') && formSeller.trim() ? formSeller.trim() : undefined,
+        location: !omittedFields.has('location') && formLocation.trim() ? formLocation.trim() : undefined,
+        settlementFee: !omittedFields.has('settlementFee') && formSettlement.trim() ? formSettlement.trim() : undefined,
+        brand: !omittedFields.has('brand') && formBrand.trim() ? formBrand.trim() : undefined,
+        warranty: !omittedFields.has('warranty') && formWarranty.trim() ? formWarranty.trim() : undefined,
+        featured: !omittedFields.has('featured') ? formFeatured : undefined,
+        rating: !omittedFields.has('rating') ? (Number.isFinite(Number(formRating)) ? Math.min(5, Math.max(1, Number(formRating))) : 5.0) : undefined,
+        reviewCount: !omittedFields.has('reviewCount') ? (Number.isFinite(Number(formReviewCount)) ? Math.max(0, Number(formReviewCount)) : 1) : undefined,
+        tags: !omittedFields.has('tags') && mergedTags.length > 0 ? mergedTags : undefined,
+        specs: !omittedFields.has('specs') && Object.keys(specsRecord).length > 0 ? specsRecord : undefined,
+
+        createdAt: editingProduct ? editingProduct.createdAt : now,
+        updatedAt: now,
+      });
+
+      let productPayload = buildPayload(finalImages);
+
+      // Guard against Firestore's 1MB document limit when multiple images are uploaded as base64 data URLs
+      const estimateBytes = (obj: unknown) => new TextEncoder().encode(JSON.stringify(obj)).length;
+      if (estimateBytes(productPayload) > 850_000) {
+        finalImages = await Promise.all(finalImages.map((img) => recompressDataUrl(img, 900, 0.65)));
+        productPayload = buildPayload(finalImages);
+      }
+      if (estimateBytes(productPayload) > 900_000) {
+        finalImages = await Promise.all(finalImages.map((img) => recompressDataUrl(img, 680, 0.52)));
+        productPayload = buildPayload(finalImages);
+      }
+      if (estimateBytes(productPayload) > 980_000) {
+        setProductFormError('Uploaded images exceed the 1MB database document limit. Please remove some uploaded photos or use image URLs.');
+        setIsSavingProduct(false);
+        return;
+      }
+
+      if (editingProduct) {
+        await onUpdateProduct(editingProduct.id, productPayload);
+        setSyncSuccessMsg(`Product "${trimmedTitle}" updated in Firestore database!`);
+        setEditingProduct(null);
+      } else {
+        await onCreateProduct(productPayload);
+        setSyncSuccessMsg(`Product "${trimmedTitle}" created and saved to Firestore database!`);
+        setIsCreatingProduct(false);
+      }
+
+      setNewImageUrl('');
+      setNewTagInput('');
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      setTimeout(() => setSyncSuccessMsg(''), 6000);
+    } catch (err: any) {
+      console.error('Failed to save product:', err);
+      let readableMessage = err?.message || 'Failed to save product to Firestore.';
+      try {
+        const parsed = JSON.parse(readableMessage);
+        if (parsed?.error) {
+          readableMessage = parsed.error;
+        }
+      } catch {
+        // Not JSON, keep message as-is
+      }
+      setProductFormError(`Could not save product: ${readableMessage}`);
+    } finally {
+      setIsSavingProduct(false);
+    }
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -780,12 +885,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setTimeout(() => setSyncSuccessMsg(''), 5000);
   };
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.title.toLowerCase().includes(productSearch.toLowerCase()) ||
-                          (p.sku && p.sku.toLowerCase().includes(productSearch.toLowerCase()));
-    const matchesCat = selectedCategoryFilter === 'All' || p.category === selectedCategoryFilter;
-    return matchesSearch && matchesCat;
-  });
+  const filteredProducts = products
+    .filter(p => {
+      const matchesSearch = p.title.toLowerCase().includes(productSearch.toLowerCase()) ||
+                            (p.sku && p.sku.toLowerCase().includes(productSearch.toLowerCase()));
+      const matchesCat = selectedCategoryFilter === 'All' || p.category === selectedCategoryFilter;
+      return matchesSearch && matchesCat;
+    })
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
   // Check if current user has approved administrative access
   const isSuperAdmin = (currentUser?.email?.toLowerCase() === 'tobi@acourze.com' || currentUser?.role === 'admin');
@@ -1473,7 +1580,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     </button>
                   </div>
 
-                  <form onSubmit={handleSaveProductForm} className="space-y-6 text-xs">
+                  <form onSubmit={handleSaveProductForm} noValidate className="space-y-6 text-xs">
+                    {productFormError && (
+                      <div className="p-3.5 bg-rose-50 border border-rose-300 text-rose-800 rounded-xl flex items-start gap-2.5 text-xs font-semibold">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                        <span>{productFormError}</span>
+                      </div>
+                    )}
                     {/* TOP ACTIVE FIELDS & OMISSION CONTROL CENTER */}
                     <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-xl space-y-3">
                       <div className="flex items-center justify-between">
@@ -1683,8 +1796,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               <input
                                 type="number"
                                 min={0}
+                                step="any"
                                 value={formStock}
-                                onChange={(e) => setFormStock(Number(e.target.value))}
+                                onChange={(e) => setFormStock(e.target.value === '' ? 0 : Number(e.target.value))}
                                 className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono text-xs"
                               />
                             </div>
@@ -1713,9 +1827,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                   type="number"
                                   min={1}
                                   max={5}
-                                  step={0.1}
+                                  step="any"
                                   value={formRating}
-                                  onChange={(e) => setFormRating(Number(e.target.value))}
+                                  onChange={(e) => setFormRating(e.target.value === '' ? 5 : Number(e.target.value))}
                                   className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono text-xs"
                                 />
                                 <Star className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0" />
@@ -1734,8 +1848,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               <input
                                 type="number"
                                 min={0}
+                                step="any"
                                 value={formReviewCount}
-                                onChange={(e) => setFormReviewCount(Number(e.target.value))}
+                                onChange={(e) => setFormReviewCount(e.target.value === '' ? 0 : Number(e.target.value))}
                                 className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono text-xs"
                               />
                             </div>
@@ -1787,8 +1902,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             type="number"
                             required
                             min={0}
+                            step="any"
                             value={formPrice}
-                            onChange={(e) => setFormPrice(Number(e.target.value))}
+                            onChange={(e) => setFormPrice(e.target.value === '' ? 0 : Number(e.target.value))}
                             className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono font-black text-slate-900 text-sm"
                           />
                           <p className="text-[10px] text-slate-500 mt-1 font-semibold">
@@ -1816,8 +1932,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               <input
                                 type="number"
                                 min={0}
+                                step="any"
                                 value={formOriginalPrice}
-                                onChange={(e) => setFormOriginalPrice(Number(e.target.value))}
+                                onChange={(e) => setFormOriginalPrice(e.target.value === '' ? 0 : Number(e.target.value))}
                                 className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono text-xs"
                               />
                               <p className="text-[10px] text-slate-500 mt-1">Shows discount slash price on card</p>
@@ -2071,6 +2188,36 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         </div>
                       )}
 
+                      {/* Attached Videos */}
+                      {formVideos.length > 0 && (
+                        <div className="space-y-2 pt-2">
+                          <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                            <Film className="w-3.5 h-3.5 text-rose-600" />
+                            Attached Product Videos ({formVideos.length})
+                          </span>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {formVideos.map((vidUrl, idx) => (
+                              <div key={idx} className="bg-slate-900 border border-slate-300 rounded-xl overflow-hidden flex flex-col">
+                                <div className="aspect-[4/3] bg-black">
+                                  <MediaViewer url={vidUrl} isVideo={true} className="w-full h-full object-contain" />
+                                </div>
+                                <div className="p-1.5 bg-slate-50 flex items-center justify-between text-[10px]">
+                                  <span className="font-bold text-slate-700">Video #{idx + 1}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveVideo(idx)}
+                                    className="text-rose-600 hover:text-rose-800 p-1 cursor-pointer"
+                                    title="Remove video"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Add Image URL & File Upload Row */}
                       <div className="pt-2 flex flex-col sm:flex-row gap-2">
                         <input
@@ -2092,11 +2239,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
                         <label className="py-2 px-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
                           <Upload className="w-3.5 h-3.5 text-sky-400" />
-                          <span>Upload Photos / Video</span>
+                          <span>{isUploadingFormMedia ? 'Processing Media...' : 'Upload Photos / Video'}</span>
                           <input
                             type="file"
                             accept="image/*,video/*"
                             multiple
+                            disabled={isUploadingFormMedia}
                             className="hidden"
                             onChange={handleImageFileUpload}
                           />
@@ -2255,25 +2403,43 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       )}
                     </div>
 
+                    {productFormError && (
+                      <div className="p-3.5 bg-rose-50 border border-rose-300 text-rose-800 rounded-xl flex items-start gap-2.5 text-xs font-semibold">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                        <span>{productFormError}</span>
+                      </div>
+                    )}
+
                     {/* SUBMIT BUTTONS */}
                     <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
                       <button
                         type="button"
+                        disabled={isSavingProduct}
                         onClick={() => {
                           setEditingProduct(null);
                           setIsCreatingProduct(false);
+                          setProductFormError(null);
                         }}
-                        className="py-2.5 px-4 text-slate-600 hover:text-slate-900 font-bold cursor-pointer"
+                        className="py-2.5 px-4 text-slate-600 hover:text-slate-900 font-bold cursor-pointer disabled:opacity-50"
                       >
                         Cancel
                       </button>
 
                       <button
                         type="submit"
-                        className="py-3 px-6 bg-[#0284C7] hover:bg-[#0369a1] text-white rounded-xl font-bold flex items-center gap-2 shadow-sm text-sm cursor-pointer"
+                        disabled={isSavingProduct || isUploadingFormMedia}
+                        className="py-3 px-6 bg-[#0284C7] hover:bg-[#0369a1] disabled:bg-slate-400 text-white rounded-xl font-bold flex items-center gap-2 shadow-sm text-sm cursor-pointer transition-colors"
                       >
-                        <Save className="w-4 h-4" />
-                        <span>{editingProduct ? 'Save Product Changes' : 'Create & Publish Product'}</span>
+                        {isSavingProduct ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                        <span>
+                          {isSavingProduct
+                            ? (editingProduct ? 'Saving Changes...' : 'Creating Product...')
+                            : (editingProduct ? 'Save Product Changes' : 'Create & Publish Product')}
+                        </span>
                       </button>
                     </div>
                   </form>

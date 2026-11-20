@@ -102,6 +102,55 @@ export async function compressImageToDataUrl(
 }
 
 /**
+ * Re-compresses an existing image data URL to a smaller dimension/quality
+ * so multi-photo product payloads stay safely under Firestore's 1MB document limit.
+ */
+export async function recompressDataUrl(
+  dataUrl: string,
+  maxDimension = 900,
+  quality = 0.65
+): Promise<string> {
+  if (!dataUrl || !dataUrl.startsWith('data:image/')) {
+    return dataUrl;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+      const smaller = canvas.toDataURL('image/jpeg', quality);
+      resolve(smaller.length < dataUrl.length ? smaller : dataUrl);
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/**
  * Stores a video file into IndexedDB and returns a persistent custom URI
  */
 export async function storeVideoFile(

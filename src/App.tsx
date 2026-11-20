@@ -543,9 +543,20 @@ export default function App() {
         gatewaySettings={gatewaySettings}
         brandSettings={brandSettings}
         admins={admins}
-        onCreateProduct={createProductInDb}
-        onUpdateProduct={updateProductInDb}
-        onDeleteProduct={deleteProductFromDb}
+        onCreateProduct={async (newProduct) => {
+          await createProductInDb(newProduct);
+          setProducts((prev) => [newProduct, ...prev.filter((p) => p.id !== newProduct.id)]);
+        }}
+        onUpdateProduct={async (productId, updates) => {
+          await updateProductInDb(productId, updates);
+          setProducts((prev) =>
+            prev.map((p) => (p.id === productId ? { ...p, ...updates } : p))
+          );
+        }}
+        onDeleteProduct={async (productId) => {
+          await deleteProductFromDb(productId);
+          setProducts((prev) => prev.filter((p) => p.id !== productId));
+        }}
         onUpdateOrderStatus={updateOrderStatusInDb}
         onUpdateUser={async (updated) => {
           await saveUserProfile(updated);
