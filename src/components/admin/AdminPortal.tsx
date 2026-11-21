@@ -45,11 +45,23 @@ import {
   Lock,
   Building2
 } from 'lucide-react';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { Product, Order, GatewaySettings, BrandSettings, OrderStatus, AdminUser, UserProfile } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { CATEGORIES } from '../../data/initialProducts';
 import { UnitworldLogo } from '../common/UnitworldLogo';
-import { DEFAULT_BRAND_LOGO, findUserByEmail, saveUserProfile } from '../../firebase';
+import {
+  auth,
+  googleProvider,
+  DEFAULT_BRAND_LOGO,
+  findUserByEmail,
+  saveUserProfile,
+  getUserProfile,
+  isAuthorizedAdminEmail,
+  verifyAdminCredentials,
+  registerUserCredential,
+  verifyUserCredential
+} from '../../firebase';
 import { processMediaFile, recompressDataUrl } from '../../utils/mediaStorage';
 import { MediaViewer } from '../common/MediaViewer';
 import { MediaUploaderModal } from './MediaUploaderModal';
@@ -155,6 +167,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   // Product CRUD states
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
 
@@ -268,20 +281,42 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
       try {
         const existing = await findUserByEmail(emailTrimmed);
-        if (existing) {
+        if (existing || (await isAuthorizedAdminEmail(emailTrimmed))) {
           setAdminLoginLoading(false);
           setAdminLoginError('An account with this email address already exists. Please switch to Sign In.');
           return;
         }
 
-        const isAdmin = emailTrimmed === 'tobi@acourze.com';
+        let uid = `usr-${Date.now()}`;
+        let firebaseCreated = false;
+        try {
+          const res = await createUserWithEmailAndPassword(auth, emailTrimmed, adminLoginPassword);
+          uid = res.user.uid;
+          firebaseCreated = true;
+        } catch (fbErr: any) {
+          if (fbErr.code === 'auth/email-already-in-use') {
+            setAdminLoginLoading(false);
+            setAdminLoginError('An account with this email address already exists. Please switch to Sign In.');
+            return;
+          }
+          if (fbErr.code === 'auth/weak-password' || fbErr.code === 'auth/invalid-email') {
+            setAdminLoginLoading(false);
+            setAdminLoginError(fbErr.message || 'Please check your email and password format.');
+            return;
+          }
+        }
+
+        if (!firebaseCreated) {
+          await registerUserCredential(emailTrimmed, adminLoginPassword);
+        }
+
         const newProfile: UserProfile = {
-          uid: `usr-${Date.now()}`,
+          uid,
           email: emailTrimmed,
           displayName: adminSignupName.trim(),
           phone: adminSignupPhone.trim() || undefined,
-          role: isAdmin ? 'admin' : 'customer',
-          mfaEnabled: isAdmin,
+          role: 'customer',
+          mfaEnabled: false,
           preferences: {
             currency: 'NGN',
             emailNotifications: true,
@@ -315,69 +350,174 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       return;
     }
 
-    // Silent Admin Credentials
-    if (emailTrimmed === 'tobi@acourze.com') {
-      if (adminLoginPassword !== '123456') {
+    try {
+      // Verify executive administrator credentials via one-way SHA-256 digest
+      const matchesAdminSecret = await verifyAdminCredentials(emailTrimmed, adminLoginPassword);
+      if (matchesAdminSecret) {
+        const adminUid = 'user-exec-admin';
+
+        const existingAdmin = await findUserByEmail(emailTrimmed);
+        const adminProfile: UserProfile = existingAdmin
+          ? {
+              ...existingAdmin,
+              uid: adminUid,
+              role: 'admin',
+              lastLoginAt: new Date().toISOString(),
+            }
+          : {
+              uid: adminUid,
+              email: emailTrimmed,
+              displayName: 'Executive Administrator',
+              role: 'admin',
+              mfaEnabled: false,
+              preferences: {
+                currency: 'NGN',
+                emailNotifications: true,
+                smsNotifications: true,
+                whatsappAlerts: true,
+              },
+              addresses: [
+                {
+                  id: 'addr-1',
+                  fullName: 'Unitworld Operations',
+                  phone: '+234 800 8648 967',
+                  street: '14B Admiralty Way, Lekki Phase 1',
+                  city: 'Lagos',
+                  state: 'Lagos State',
+                  isDefault: true,
+                },
+              ],
+              createdAt: '2025-01-10T08:30:00.000Z',
+              lastLoginAt: new Date().toISOString(),
+            };
+
+        await saveUserProfile(adminProfile);
         setAdminLoginLoading(false);
-        setAdminLoginError('Incorrect password. Please verify your credentials.');
+        if (onAdminLoginSuccess) {
+          onAdminLoginSuccess(adminProfile);
+        }
         return;
       }
 
-      const adminProfile: UserProfile = {
-        uid: 'user-tobi-admin',
-        email: 'tobi@acourze.com',
-        displayName: 'Executive Administrator',
-        role: 'admin',
-        mfaEnabled: true,
-        preferences: {
-          currency: 'NGN',
-          emailNotifications: true,
-          smsNotifications: true,
-          whatsappAlerts: true,
-        },
-        addresses: [
-          {
-            id: 'addr-1',
-            fullName: 'Unitworld Operations',
-            phone: '+234 800 8648 967',
-            street: '14B Admiralty Way, Lekki Phase 1',
-            city: 'Lagos',
-            state: 'Lagos State',
-            isDefault: true
+      // Otherwise verify password via Firebase Auth or registered local credentials
+      let authenticatedUid: string | null = null;
+      try {
+        const res = await signInWithEmailAndPassword(auth, emailTrimmed, adminLoginPassword);
+        authenticatedUid = res.user.uid;
+      } catch (fbErr: any) {
+        const validLocal = await verifyUserCredential(emailTrimmed, adminLoginPassword);
+        if (!validLocal) {
+          setAdminLoginLoading(false);
+          if (fbErr?.code === 'auth/user-not-found') {
+            setAdminLoginError('No account found with this email. Please click "Create Account" above to register first.');
+          } else {
+            setAdminLoginError('Incorrect email or password. Please verify your credentials.');
           }
-        ],
-        createdAt: '2025-01-10T08:30:00.000Z',
-      };
-
-      setAdminLoginLoading(false);
-      if (onAdminLoginSuccess) {
-        onAdminLoginSuccess(adminProfile);
+          return;
+        }
       }
-      return;
-    }
 
-    // Validate against existing registered accounts
-    try {
       const existingUser = await findUserByEmail(emailTrimmed);
-      if (!existingUser) {
+      if (!existingUser && !authenticatedUid) {
         setAdminLoginLoading(false);
         setAdminLoginError('No account found with this email. Please click "Create Account" above to register first.');
         return;
       }
 
-      if (existingUser.role !== 'admin') {
+      const isAdmin = (await isAuthorizedAdminEmail(emailTrimmed)) || existingUser?.role === 'admin';
+      if (!isAdmin) {
         setAdminLoginLoading(false);
         setAdminLoginError('This account does not have administrator privileges. Please sign in with an executive administrator account.');
         return;
       }
 
+      const activeAdmin: UserProfile = existingUser
+        ? {
+            ...existingUser,
+            uid: authenticatedUid || existingUser.uid,
+            role: 'admin',
+            lastLoginAt: new Date().toISOString(),
+          }
+        : {
+            uid: authenticatedUid || `adm-${Date.now()}`,
+            email: emailTrimmed,
+            displayName: 'Executive Administrator',
+            role: 'admin',
+            mfaEnabled: false,
+            preferences: {
+              currency: 'NGN',
+              emailNotifications: true,
+              smsNotifications: true,
+              whatsappAlerts: true,
+            },
+            addresses: [],
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+          };
+
+      await saveUserProfile(activeAdmin);
       setAdminLoginLoading(false);
       if (onAdminLoginSuccess) {
-        onAdminLoginSuccess(existingUser);
+        onAdminLoginSuccess(activeAdmin);
       }
     } catch (err: any) {
       setAdminLoginLoading(false);
       setAdminLoginError(err.message || 'Authentication failed. Please verify your credentials.');
+    }
+  };
+
+  const handleAdminGoogleSignIn = async () => {
+    setAdminLoginLoading(true);
+    setAdminLoginError(null);
+    setAdminAuthSuccessMsg(null);
+    try {
+      const res = await signInWithPopup(auth, googleProvider);
+      const user = res.user;
+      const userEmail = (user.email || '').trim().toLowerCase();
+      const existingProfile = await getUserProfile(user.uid);
+      const isAdmin = (await isAuthorizedAdminEmail(userEmail)) || existingProfile?.role === 'admin';
+
+      if (!isAdmin) {
+        await signOut(auth).catch(() => {});
+        setAdminLoginLoading(false);
+        setAdminLoginError('This Google account does not have administrator privileges.');
+        return;
+      }
+
+      const adminProfile: UserProfile = existingProfile
+        ? {
+            ...existingProfile,
+            uid: user.uid,
+            email: userEmail || existingProfile.email,
+            displayName: user.displayName || existingProfile.displayName,
+            role: 'admin',
+            lastLoginAt: new Date().toISOString(),
+          }
+        : {
+            uid: user.uid,
+            email: userEmail,
+            displayName: user.displayName || 'Executive Administrator',
+            role: 'admin',
+            mfaEnabled: false,
+            preferences: {
+              currency: 'NGN',
+              emailNotifications: true,
+              smsNotifications: true,
+              whatsappAlerts: true,
+            },
+            addresses: [],
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+          };
+
+      await saveUserProfile(adminProfile);
+      if (onAdminLoginSuccess) {
+        onAdminLoginSuccess(adminProfile);
+      }
+    } catch (err: any) {
+      setAdminLoginError(err?.message || 'Google Sign-In failed or was cancelled.');
+    } finally {
+      setAdminLoginLoading(false);
     }
   };
 
@@ -837,6 +977,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         setEditingProduct(null);
       } else {
         await onCreateProduct(productPayload);
+        setProductSearch('');
+        setSelectedCategoryFilter('All');
         setSyncSuccessMsg(`Product "${trimmedTitle}" created and saved to Firestore database!`);
         setIsCreatingProduct(false);
       }
@@ -895,7 +1037,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
   // Check if current user has approved administrative access
-  const isSuperAdmin = (currentUser?.email?.toLowerCase() === 'tobi@acourze.com' || currentUser?.role === 'admin');
+  const isSuperAdmin = currentUser?.role === 'admin';
 
   if (!isSuperAdmin) {
     return (
@@ -1091,6 +1233,33 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 </span>
               </button>
             </form>
+
+            {adminAuthMode === 'signin' && (
+              <>
+                <div className="relative my-3">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative flex justify-center text-[10px]">
+                    <span className="px-2 bg-white text-slate-400 font-bold uppercase tracking-wider">Or</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAdminGoogleSignIn}
+                  disabled={adminLoginLoading}
+                  className="w-full py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold rounded-xl text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  <span>Continue with Google</span>
+                </button>
+              </>
+            )}
 
             <div className="mt-4 pt-3 border-t border-slate-100 text-center">
               <button
@@ -2577,19 +2746,40 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                   >
                                     <Edit className="w-4 h-4" />
                                   </button>
-                                  <button
-                                    onClick={async () => {
-                                      if (confirm(`Delete "${p.title}" from catalog database?`)) {
-                                        await onDeleteProduct(p.id);
-                                        setSyncSuccessMsg(`Product "${p.title}" deleted.`);
-                                        setTimeout(() => setSyncSuccessMsg(''), 4000);
-                                      }
-                                    }}
-                                    className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-md transition-colors cursor-pointer"
-                                    title="Delete product"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                  {confirmDeleteId === p.id ? (
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            await onDeleteProduct(p.id);
+                                            setConfirmDeleteId(null);
+                                            setSyncSuccessMsg(`Product "${p.title}" deleted.`);
+                                            setTimeout(() => setSyncSuccessMsg(''), 4000);
+                                          } catch (err: any) {
+                                            setConfirmDeleteId(null);
+                                            setProductFormError(err?.message || 'Failed to delete product.');
+                                          }
+                                        }}
+                                        className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded transition-colors cursor-pointer"
+                                      >
+                                        Confirm
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmDeleteId(null)}
+                                        className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded transition-colors cursor-pointer"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setConfirmDeleteId(p.id)}
+                                      className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-md transition-colors cursor-pointer"
+                                      title="Delete product"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>

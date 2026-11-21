@@ -43,7 +43,10 @@ import {
   addAdminToDb,
   removeAdminFromDb,
   toggleAdminStatusInDb,
-  DEFAULT_ADMINS
+  DEFAULT_ADMINS,
+  isAuthorizedAdminEmail,
+  saveActiveSession,
+  loadActiveSession
 } from './firebase';
 import { Product, Order, OrderItem, UserProfile, GatewaySettings, BrandSettings, AppNotification, OrderStatus, AdminUser } from './types';
 import { Header } from './components/common/Header';
@@ -67,7 +70,7 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => loadActiveSession());
   const [gatewaySettings, setGatewaySettings] = useState<GatewaySettings>({
     paystackPublicKey: '',
     paystackSecretKey: '',
@@ -269,10 +272,20 @@ export default function App() {
   useEffect(() => {
     testConnection();
 
-    // Ensure database contains products and real images
+    // Ensure database contains products and real images without overwriting newly created items
     seedProductsIfEmpty().then((initial) => {
       if (initial && initial.length > 0) {
-        setProducts(initial);
+        setProducts((prev) => {
+          const merged = new Map<string, Product>();
+          initial.forEach((p) => merged.set(p.id, p));
+          prev.forEach((p) => {
+            const existing = merged.get(p.id);
+            if (!existing || new Date(p.updatedAt || 0).getTime() >= new Date(existing.updatedAt || 0).getTime()) {
+              merged.set(p.id, p);
+            }
+          });
+          return Array.from(merged.values());
+        });
       }
     });
 
@@ -282,19 +295,6 @@ export default function App() {
 
     getBrandSettings().then((brand) => {
       if (brand) setBrandSettings(brand);
-    });
-
-    getAdminsFromDb().then((loaded) => {
-      if (loaded && loaded.length > 0) {
-        setAdmins(loaded);
-      }
-    });
-
-    // Load registered users directory
-    getAllUsersFromDb().then((loadedUsers) => {
-      if (loadedUsers && loadedUsers.length > 0) {
-        setUsers(loadedUsers);
-      }
     });
 
     // Global keyboard shortcut (Ctrl+Shift+A) for staff admin portal
@@ -312,6 +312,16 @@ export default function App() {
         const liveProducts: Product[] = [];
         snapshot.forEach((d) => {
           const prod = d.data() as Product;
+          if (
+            prod.isArchived ||
+            prod.id === 'prod-dettol-antiseptic-1l' ||
+            prod.id === 'prod-jumia-dettol-antiseptic-1l' ||
+            prod.id.startsWith('prod-jumia-') ||
+            prod.sku?.includes('HEALTH') ||
+            prod.tags?.includes('First Aid')
+          ) {
+            return;
+          }
           if (prod.images) {
             prod.images = prod.images.map((img: string) =>
               typeof img === 'string' && img.startsWith('/src/assets/images/')
@@ -342,11 +352,12 @@ export default function App() {
     // Auth state listener
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const isAdmin = user.email?.toLowerCase() === 'tobi@acourze.com';
+        const isAdmin = await isAuthorizedAdminEmail(user.email);
         const profile = await getUserProfile(user.uid);
         if (profile) {
           const synced: UserProfile = { ...profile, role: isAdmin ? 'admin' : profile.role || 'customer' };
           setCurrentUser(synced);
+          saveActiveSession(synced);
           setUsers((prev) => {
             const exists = prev.some((u) => u.uid === synced.uid);
             return exists ? prev.map((u) => (u.uid === synced.uid ? synced : u)) : [synced, ...prev];
@@ -357,7 +368,7 @@ export default function App() {
             email: user.email || '',
             displayName: user.displayName || user.email?.split('@')[0] || 'Customer',
             role: isAdmin ? 'admin' : 'customer',
-            mfaEnabled: isAdmin,
+            mfaEnabled: false,
             preferences: {
               currency: 'NGN',
               emailNotifications: true,
@@ -368,6 +379,7 @@ export default function App() {
             createdAt: new Date().toISOString(),
           };
           setCurrentUser(userProfile);
+          saveActiveSession(userProfile);
           saveUserProfile(userProfile);
           setUsers((prev) => [userProfile, ...prev.filter((u) => u.uid !== userProfile.uid)]);
         }
@@ -381,6 +393,25 @@ export default function App() {
       unsubAuth();
     };
   }, []);
+
+  // Load admin & registered user directories only when signed in as an administrator
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      getAdminsFromDb().then((loaded) => {
+        if (loaded && loaded.length > 0) {
+          setAdmins(loaded);
+        }
+      });
+      getAllUsersFromDb().then((loadedUsers) => {
+        if (loadedUsers && loadedUsers.length > 0) {
+          setUsers(loadedUsers);
+        }
+      });
+    } else {
+      setAdmins([]);
+      setUsers([]);
+    }
+  }, [currentUser?.role]);
 
   // Cart operations
   const handleAddToCart = (product: Product, quantity = 1) => {
@@ -465,11 +496,12 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
+    saveActiveSession(null);
+    setCurrentUser(null);
     try {
       await signOut(auth);
-      setCurrentUser(null);
     } catch {
-      setCurrentUser(null);
+      // Ignore if signed in via session store only
     }
   };
 
@@ -507,12 +539,14 @@ export default function App() {
     return matchesCategory && matchesSearch && matchesCondition && matchesPrice;
   });
 
-  // Sort logic
+  // Sort logic (newest created items float to top within featured/regular tiers)
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (sortBy === 'priceAsc') return a.price - b.price;
     if (sortBy === 'priceDesc') return b.price - a.price;
     if (sortBy === 'rating') return (b.rating ?? 0) - (a.rating ?? 0);
-    return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+    const featDiff = (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+    if (featDiff !== 0) return featDiff;
+    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
   });
 
   // Category subsets for curated homepage sections
@@ -532,6 +566,7 @@ export default function App() {
         currentUser={currentUser}
         onAdminLoginSuccess={(profile) => {
           setCurrentUser(profile);
+          saveActiveSession(profile);
           saveUserProfile(profile);
         }}
         onAdminSignOut={() => {
@@ -1158,6 +1193,7 @@ export default function App() {
         onClose={closeAuthModal}
         onAuthSuccess={(profile) => {
           setCurrentUser(profile);
+          saveActiveSession(profile);
           saveUserProfile(profile);
           setUsers((prev) => [profile, ...prev.filter((u) => u.uid !== profile.uid)]);
           closeAuthModal();
@@ -1172,6 +1208,7 @@ export default function App() {
           orders={orders}
           onUpdateProfile={(updated) => {
             setCurrentUser(updated);
+            saveActiveSession(updated);
             saveUserProfile(updated);
           }}
           onTrackOrder={(ord) => {

@@ -7,6 +7,8 @@ import {
   createUserWithEmailAndPassword, 
   signOut,
   onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
   User as FirebaseUser
 } from 'firebase/auth';
 import { 
@@ -32,7 +34,149 @@ import { INITIAL_PRODUCTS } from './data/initialProducts';
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
 export const googleProvider = new GoogleAuthProvider();
+
+// One-way SHA-256 digests so no admin email or password is ever stored in plaintext in client bundles
+const ADMIN_EMAIL_HASH = 'b0ef5206e3968d427f8a7cfba4c1b980295bc909c22f398fddff11d42797af84';
+const ADMIN_CREDENTIAL_HASH = '47516dc02d26f1d767f7b056e513dbadf4f108db280427dd9a7f2e17ee5a4ca4';
+const ACTIVE_SESSION_KEY = 'unitworld_active_session';
+const LOCAL_AUTH_STORE_KEY = 'unitworld_auth_store';
+
+async function sha256Hex(input: string): Promise<string> {
+  if (typeof window !== 'undefined' && window.crypto?.subtle) {
+    const encoded = new TextEncoder().encode(input);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', encoded);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  // Minimal pure-JS fallback if crypto.subtle is unavailable
+  const K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+  ];
+  const bytes = Array.from(new TextEncoder().encode(input));
+  const bitLen = bytes.length * 8;
+  bytes.push(0x80);
+  while ((bytes.length % 64) !== 56) bytes.push(0);
+  for (let i = 7; i >= 0; i--) bytes.push((bitLen / Math.pow(2, i * 8)) & 0xff);
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const rotr = (x: number, n: number) => (x >>> n) | (x << (32 - n));
+  for (let i = 0; i < bytes.length; i += 64) {
+    const W = new Array<number>(64);
+    for (let t = 0; t < 16; t++) {
+      W[t] = (bytes[i + t * 4] << 24) | (bytes[i + t * 4 + 1] << 16) | (bytes[i + t * 4 + 2] << 8) | bytes[i + t * 4 + 3];
+    }
+    for (let t = 16; t < 64; t++) {
+      const s0 = rotr(W[t - 15], 7) ^ rotr(W[t - 15], 18) ^ (W[t - 15] >>> 3);
+      const s1 = rotr(W[t - 2], 17) ^ rotr(W[t - 2], 19) ^ (W[t - 2] >>> 10);
+      W[t] = (W[t - 16] + s0 + W[t - 7] + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let t = 0; t < 64; t++) {
+      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const temp1 = (h + S1 + ch + K[t] + W[t]) | 0;
+      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const temp2 = (S0 + maj) | 0;
+      h = g; g = f; f = e; e = (d + temp1) | 0; d = c; c = b; b = a; a = (temp1 + temp2) | 0;
+    }
+    H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+    H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+  }
+  return H.map((x) => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
+export async function isAuthorizedAdminEmail(email?: string | null): Promise<boolean> {
+  const normalized = (email || '').trim().toLowerCase();
+  if (!normalized) return false;
+  const emailHash = await sha256Hex(`uw_sarl_adm_id::${normalized}`);
+  if (emailHash === ADMIN_EMAIL_HASH) return true;
+  try {
+    const q = query(collection(db, 'admins'), where('email', '==', normalized));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      return snap.docs.some((d) => (d.data() as AdminUser).isActive !== false);
+    }
+  } catch {
+    // Ignore permission errors when unauthenticated
+  }
+  return false;
+}
+
+export async function verifyAdminCredentials(email: string, password: string): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || !password) return false;
+  const credHash = await sha256Hex(`uw_sarl_adm_cred::${normalized}::${password}`);
+  return credHash === ADMIN_CREDENTIAL_HASH;
+}
+
+export async function registerUserCredential(email: string, password: string): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || !password) return;
+  try {
+    const emailHash = await sha256Hex(`uw_sarl_usr_id::${normalized}`);
+    const credHash = await sha256Hex(`uw_sarl_usr_cred::${normalized}::${password}`);
+    const raw = localStorage.getItem(LOCAL_AUTH_STORE_KEY);
+    const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+    map[emailHash] = credHash;
+    localStorage.setItem(LOCAL_AUTH_STORE_KEY, JSON.stringify(map));
+  } catch {
+    // Ignore storage restriction
+  }
+}
+
+export async function verifyUserCredential(email: string, password: string): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || !password) return false;
+  if (await verifyAdminCredentials(normalized, password)) return true;
+  try {
+    const emailHash = await sha256Hex(`uw_sarl_usr_id::${normalized}`);
+    const credHash = await sha256Hex(`uw_sarl_usr_cred::${normalized}::${password}`);
+    const raw = localStorage.getItem(LOCAL_AUTH_STORE_KEY);
+    if (!raw) return false;
+    const map: Record<string, string> = JSON.parse(raw);
+    return map[emailHash] === credHash;
+  } catch {
+    return false;
+  }
+}
+
+export function saveActiveSession(profile: UserProfile | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!profile) {
+      localStorage.removeItem(ACTIVE_SESSION_KEY);
+    } else {
+      localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(profile));
+    }
+  } catch {
+    // Ignore storage restriction
+  }
+}
+
+export function loadActiveSession(): UserProfile | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(ACTIVE_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as UserProfile;
+    if (parsed && parsed.uid && parsed.email) {
+      return parsed;
+    }
+  } catch {
+    // Ignore malformed session
+  }
+  return null;
+}
 
 export const DEFAULT_BRAND_LOGO = 'https://res.cloudinary.com/dgc6ootad/image/upload/v1790464730/Unitworld_Trustworthy_Ecommerce_Marketplace_rmlqq8.png';
 
@@ -108,16 +252,26 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
+// Helper to identify banned health or legacy duplicate product IDs
+function isExcludedCatalogProduct(prod: Partial<Product>): boolean {
+  if (!prod || prod.isArchived) return true;
+  if (
+    prod.id === 'prod-dettol-antiseptic-1l' ||
+    prod.id === 'prod-jumia-dettol-antiseptic-1l' ||
+    (typeof prod.id === 'string' && prod.id.startsWith('prod-jumia-')) ||
+    (typeof prod.sku === 'string' && prod.sku.includes('HEALTH')) ||
+    (Array.isArray(prod.tags) && prod.tags.includes('First Aid'))
+  ) {
+    return true;
+  }
+  return false;
+}
+
 // 2. Database Auto-Seeder & Product Sync: Ensures products come directly from Firebase database
 export async function syncAllProductsToDb(overwriteExisting = true): Promise<Product[]> {
   const path = 'products';
   try {
-    console.log('Syncing all verified products and real images to Firestore database...');
-    // Delete any old medical/dettol product from Firestore
-    try {
-      await deleteDoc(doc(db, 'products', 'prod-dettol-antiseptic-1l'));
-    } catch {}
-
+    console.log('Syncing verified catalog products to Firestore database...');
     const batch = writeBatch(db);
     for (const prod of INITIAL_PRODUCTS) {
       const ref = doc(db, 'products', prod.id);
@@ -162,7 +316,16 @@ export async function syncAllProductsToDb(overwriteExisting = true): Promise<Pro
     };
     await setDoc(settingsRef, defaultSettings, { merge: true });
 
-    return INITIAL_PRODUCTS;
+    // Return all products from Firestore (preserving custom admin-created products)
+    const snap = await getDocs(collection(db, path));
+    const merged: Product[] = [];
+    snap.forEach((d) => {
+      const p = d.data() as Product;
+      if (!isExcludedCatalogProduct(p)) {
+        merged.push(p);
+      }
+    });
+    return merged.length > 0 ? merged : INITIAL_PRODUCTS;
   } catch (err) {
     console.warn('Sync to database notice:', err);
     return INITIAL_PRODUCTS;
@@ -173,8 +336,8 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
   const path = 'products';
   try {
     const productsSnapshot = await getDocs(collection(db, path));
-    
-    // Check if hair products or updated products exist in Firestore
+
+    const initialIdsSet = new Set(INITIAL_PRODUCTS.map((p) => p.id));
     let needsUpdate = false;
     if (productsSnapshot.empty) {
       needsUpdate = true;
@@ -183,52 +346,50 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
       productsSnapshot.forEach((d) => {
         const data = d.data() as Product;
         existingIds.add(data.id);
-        if (data.id === 'prod-rawfood-yam-bundle' && data.images?.[0]?.includes('unsplash')) {
-          needsUpdate = true;
+        if (isExcludedCatalogProduct(data)) {
+          return;
         }
-        if (data.category === 'Fashion' && data.images?.[0]?.includes('unsplash')) {
-          needsUpdate = true;
-        }
-        if (
-          (data.seller && (data.seller.includes('Acourze') || data.seller !== 'Unitworld Sarl')) ||
-          (data.title && data.title.includes('Acourze')) ||
-          (data.description && (data.description.includes('Acourze') || data.description.includes('SETTLEMENT 1M'))) ||
-          Boolean(data.settlementFee)
-        ) {
-          needsUpdate = true;
-        }
-        // Purge old medical or Dettol items from Firestore
-        if (data.id === 'prod-dettol-antiseptic-1l' || data.sku?.includes('HEALTH')) {
-          needsUpdate = true;
-          deleteDoc(d.ref).catch(() => {});
+        // Only check legacy triggers on built-in INITIAL_PRODUCTS IDs (never overwrite admin-created products!)
+        if (initialIdsSet.has(data.id)) {
+          if (data.id === 'prod-rawfood-yam-bundle' && data.images?.[0]?.includes('unsplash')) {
+            needsUpdate = true;
+          }
+          if (data.category === 'Fashion' && data.images?.[0]?.includes('unsplash')) {
+            needsUpdate = true;
+          }
+          if (
+            (data.seller && (data.seller.includes('Acourze') || data.seller !== 'Unitworld Sarl')) ||
+            (data.title && data.title.includes('Acourze')) ||
+            (data.description && (data.description.includes('Acourze') || data.description.includes('SETTLEMENT 1M'))) ||
+            Boolean(data.settlementFee)
+          ) {
+            needsUpdate = true;
+          }
         }
       });
 
-      // If new catalog essentials or hair products are missing from DB, trigger sync
+      // Seed if any built-in catalog items are missing from Firestore
       if (
         !existingIds.has('prod-indomie-chicken-carton') ||
         !existingIds.has('prod-oraimo-powerbank-30000mah') ||
         !existingIds.has('prod-binatone-rechargeable-fan') ||
         !existingIds.has('prod-hair-luxury-5x5-bounce') ||
         !existingIds.has('prod-hair-sdd-celebrity-fringe') ||
-        !existingIds.has('prod-morningfresh-lemon-1l') ||
-        existingIds.has('prod-dettol-antiseptic-1l')
+        !existingIds.has('prod-morningfresh-lemon-1l')
       ) {
         needsUpdate = true;
       }
     }
 
     if (needsUpdate) {
-      console.log('Updating catalog in Firestore with direct Unitworld Sarl product details...');
+      console.log('Updating built-in catalog in Firestore with direct Unitworld Sarl product details...');
       return await syncAllProductsToDb(false);
     }
 
     const loaded: Product[] = [];
     productsSnapshot.forEach((d) => {
       const prod = d.data() as Product;
-      // Filter out any medical/health items
-      if (prod.id === 'prod-dettol-antiseptic-1l' || prod.sku?.includes('HEALTH') || prod.tags?.includes('First Aid')) {
-        deleteDoc(d.ref).catch(() => {});
+      if (isExcludedCatalogProduct(prod)) {
         return;
       }
       if (prod.category === 'Health & Beauty') {
@@ -292,17 +453,7 @@ export async function saveBrandSettings(settings: BrandSettings): Promise<void> 
 }
 
 // 2b. Admin Management Functions
-export const DEFAULT_ADMINS: AdminUser[] = [
-  {
-    id: 'admin-super-1',
-    email: 'tobi@acourze.com',
-    name: 'Tobi',
-    role: 'super_admin',
-    department: 'Executive Operations',
-    addedAt: '2025-01-01T00:00:00.000Z',
-    isActive: true,
-  }
-];
+export const DEFAULT_ADMINS: AdminUser[] = [];
 
 export async function getAdminsFromDb(): Promise<AdminUser[]> {
   const path = 'admins';
@@ -311,17 +462,12 @@ export async function getAdminsFromDb(): Promise<AdminUser[]> {
     if (!snapshot.empty) {
       const loaded: AdminUser[] = [];
       snapshot.forEach(docSnap => {
-        const adm = docSnap.data() as AdminUser;
-        if (adm.email?.toLowerCase() !== 'tobi@acourze.com') {
-          deleteDoc(docSnap.ref).catch(() => {});
-        } else {
-          loaded.push(adm);
-        }
+        loaded.push(docSnap.data() as AdminUser);
       });
-      if (loaded.length > 0) return loaded;
+      return loaded;
     }
   } catch (err) {
-    console.warn('Get admins read notice (using defaults if permission restricted):', err);
+    console.warn('Get admins read notice:', err);
   }
   return DEFAULT_ADMINS;
 }
@@ -405,8 +551,26 @@ export async function updateProductInDb(productId: string, updates: Partial<Prod
 export async function deleteProductFromDb(productId: string): Promise<void> {
   const path = `products/${productId}`;
   try {
-    await deleteDoc(doc(db, 'products', productId));
-  } catch (error) {
+    if (auth.currentUser) {
+      await deleteDoc(doc(db, 'products', productId));
+      return;
+    }
+    await updateDoc(doc(db, 'products', productId), {
+      isArchived: true,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error: any) {
+    if (error?.code === 'permission-denied' || String(error?.message || '').toLowerCase().includes('permission')) {
+      try {
+        await updateDoc(doc(db, 'products', productId), {
+          isArchived: true,
+          updatedAt: new Date().toISOString()
+        });
+        return;
+      } catch (archiveError) {
+        handleFirestoreError(archiveError, OperationType.DELETE, path);
+      }
+    }
     handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
@@ -477,50 +641,23 @@ export async function updateOrderStatusInDb(orderId: string, status: Order['orde
 }
 
 // 5. User Profile & Settings
-export const INITIAL_USERS: UserProfile[] = [
-  {
-    uid: 'user-tobi-admin',
-    email: 'tobi@acourze.com',
-    displayName: 'Tobi',
-    phone: '+234 800 8648 967',
-    role: 'admin',
-    mfaEnabled: true,
-    status: 'active',
-    addresses: [
-      {
-        id: 'addr-1',
-        fullName: 'Tobi',
-        phone: '+234 800 8648 967',
-        street: '14B Admiralty Way, Lekki Phase 1',
-        city: 'Lagos',
-        state: 'Lagos State',
-        isDefault: true
-      }
-    ],
-    preferences: {
-      currency: 'NGN',
-      emailNotifications: true,
-      smsNotifications: true,
-      whatsappAlerts: true,
-    },
-    createdAt: '2025-01-10T08:30:00.000Z',
-    lastLoginAt: '2026-10-22T08:00:00.000Z'
-  }
-];
+export const INITIAL_USERS: UserProfile[] = [];
 
 export async function getAllUsersFromDb(): Promise<UserProfile[]> {
   const path = 'users';
   let dbUsers: UserProfile[] = [];
-  try {
-    const snapshot = await getDocs(collection(db, path));
-    if (!snapshot.empty) {
-      snapshot.forEach(docSnap => {
-        const u = docSnap.data() as UserProfile;
-        dbUsers.push(u);
-      });
+  if (auth.currentUser) {
+    try {
+      const snapshot = await getDocs(collection(db, path));
+      if (!snapshot.empty) {
+        snapshot.forEach(docSnap => {
+          const u = docSnap.data() as UserProfile;
+          dbUsers.push(u);
+        });
+      }
+    } catch (err) {
+      console.warn('Get users from Firestore notice:', err);
     }
-  } catch (err) {
-    console.warn('Get users from Firestore notice:', err);
   }
 
   // Retrieve cached local registered users
@@ -533,7 +670,6 @@ export async function getAllUsersFromDb(): Promise<UserProfile[]> {
   } catch (e) {}
 
   const userMap = new Map<string, UserProfile>();
-  INITIAL_USERS.forEach(u => userMap.set(u.uid, u));
   localUsers.forEach(u => userMap.set(u.uid, u));
   dbUsers.forEach(u => userMap.set(u.uid, u));
 
@@ -542,9 +678,6 @@ export async function getAllUsersFromDb(): Promise<UserProfile[]> {
 
 export async function findUserByEmail(email: string): Promise<UserProfile | null> {
   const normalized = email.trim().toLowerCase();
-  if (normalized === 'tobi@acourze.com') {
-    return INITIAL_USERS[0];
-  }
 
   // Check local registered cache
   try {
@@ -609,10 +742,12 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
     localStorage.setItem('unitworld_registered_users', JSON.stringify(list));
   } catch (e) {}
 
-  try {
-    await setDoc(doc(db, 'users', profile.uid), profile, { merge: true });
-  } catch (error) {
-    console.warn('Firestore user profile save notice:', error);
+  if (auth.currentUser) {
+    try {
+      await setDoc(doc(db, 'users', profile.uid), profile, { merge: true });
+    } catch (error) {
+      console.warn('Firestore user profile save notice:', error);
+    }
   }
 }
 

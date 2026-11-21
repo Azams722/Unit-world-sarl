@@ -31,8 +31,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Exterior': 'Obsidian Black Firstbody',
       'Sale Type': 'Direct Unitworld Sarl Inventory'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 2. TOYOTA HIGHLANDER XSE 2021 (User prompt verbatim)
@@ -64,8 +64,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Interior': '3 Rows Sport Leather Seats',
       'Status': 'Nothing to Fix, Perfect Condition'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 3. TOYOTA HIGHLANDER LIMITED EDITION (User prompt verbatim)
@@ -95,8 +95,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Transmission': 'Automatic Smooth Gear',
       'AC Status': 'Factory Chilling AC'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 4. LEXUS RX350 F-SPORTS 2017 (User prompt verbatim)
@@ -130,8 +130,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Features': 'Factory Nav Screen, Reverse Cam, Active Powerboot',
       'Grade': 'Grade A+++ Barely Driven'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 5. TOYOTA CAMRY 2010 (User prompt verbatim)
@@ -163,8 +163,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Customs': 'Duty Fully Paid',
       'Location': 'Igando, Lagos'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 6. FASHION ITEM 1 - All clothes are ₦25,000 naira!
@@ -194,8 +194,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Fit': 'Tailored Relaxed Fit',
       'Sizes': 'M, L, XL, XXL'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 7. FASHION ITEM 2 - All clothes are ₦25,000 naira!
@@ -225,8 +225,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Collar': 'Cuban Camp Collar',
       'Sizes': 'M, L, XL, XXL'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 8. FASHION ITEM 3 - All clothes are ₦25,000 naira!
@@ -255,8 +255,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Fabric': 'Matte Rayon Cotton Weave',
       'Sizes': 'M, L, XL, XXL'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 9. FASHION ITEM 4 - All clothes are ₦25,000 naira!
@@ -284,8 +284,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Waistband': 'Ribbed Elastic with Heavyweight Dipped Cords',
       'Sizes': 'S, M, L, XL'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 10. FASHION ITEM 5 - All clothes are ₦25,000 naira!
@@ -313,8 +313,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Fabric': 'Cotton Pique & Fine Acrylic Knit',
       'Sizes': 'M, L, XL, XXL'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 11. SUPERMARKET & RAW FOODS - REAL BENUE YAM TUBERS (Fixed: Authentic Yams, No Carrots!)
@@ -343,8 +343,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Variety': 'Authentic White Yam (Dioscorea rotundata)',
       'Condition': 'Dry, Solid, Sweet, Zero Decay'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 12. SUPERMARKET & RAW FOODS - REAL DELTA PALM OIL 25L KEG
@@ -373,8 +373,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Origin': 'Delta State Traditional Press',
       'Packaging': 'Factory Sealed Yellow Keg'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 13. SUPERMARKET & RAW FOODS - REAL ROYAL STALLION RICE 50KG
@@ -403,8 +403,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Quality': '100% Stone-Free and Sortex Cleaned',
       'Packaging': 'Reinforced Moisture-Proof Woven Sack'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 14. PHONES & TABLETS
@@ -434,8 +434,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Storage': '256GB NVMe',
       'Warranty': '1 Year International Apple Warranty'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 15. ELECTRONICS
@@ -464,8 +464,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Smart OS': 'Google TV with Play Store & Netflix',
       'Ports': '4x HDMI (2x HDMI 2.1), 2x USB, Optical, LAN'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // === POPULAR EVERYDAY ESSENTIALS & HOUSEHOLD STAPLES ===
@@ -496,8 +496,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Flavor': 'Signature Onion Chicken Seasoning',
       'Manufacturer': 'Dufil Prima Foods Plc'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 17. INDOMIE SUPER PACK CHICKEN CARTON (40 x 120g Packs)
@@ -526,8 +526,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Flavor': 'Chicken Flavor',
       'Manufacturer': 'Dufil Prima Foods Plc'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 18. ORAIMO 30000MAH FAST CHARGE POWER BANK
@@ -557,8 +557,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Display': 'Digital LED Exact Percentage Indicator',
       'Warranty': '1 Year Official Warranty'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 19. ORAIMO WATCH 5 LITE SMARTWATCH
@@ -587,8 +587,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Battery Life': 'Up to 7 Days Active Use',
       'Waterproof': 'IP68 Water & Dust Resistant'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 20. BINATONE 18-INCH RECHARGEABLE STANDING FAN
@@ -618,8 +618,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Special Features': 'Full Remote Control, USB Phone Charger, Night Light',
       'Warranty': '2 Years Binatone Nigeria Warranty'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 21. SILVER CREST 2L 4500W COMMERCIAL BLENDER
@@ -648,8 +648,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Blades': '6-Leaf Hardened Laser-Cut Stainless Steel Blades',
       'Usage': 'Beans for Akara/Moi-Moi, Smoothies, Tigernut Milk, Ice Crushing'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 22. ITEL A70 128GB SMARTPHONE
@@ -679,8 +679,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Battery': '5000mAh Long-Lasting Battery with Type-C Port',
       'Warranty': '1 Year Carlcare Warranty'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 23. NIVEA MEN DEEP 72H ROLL-ON (Pack of 3)
@@ -708,8 +708,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Formula': 'Black Charcoal Clean Deodorant Protection',
       'Protection': '72 Hours Clean Freshness'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 24. GOLDEN PENNY PURE SOYA OIL 5L
@@ -737,8 +737,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Purity': '100% Pure Refined Soya Bean Vegetable Cooking Oil',
       'Dietary': 'Zero Cholesterol, Enriched with Vitamin A'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 25. NESTLÉ MILO REFILL 800G
@@ -766,8 +766,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Nutrients': 'Activ-Go: Vitamins B2, B3, B6, B12, C, D, Calcium, Iron',
       'Manufacturer': 'Nestlé Nigeria Plc'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 26. MORNING FRESH DISHWASHING LIQUID 1L
@@ -795,8 +795,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Fragrance': 'Zesty Citrus Lemon',
       'Manufacturer': 'PZ Cussons Nigeria Plc'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 27. LUXURY HAIR 1 - Luxury 5x5 Bounce
@@ -834,8 +834,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Color': 'Natural Black / 1B',
       'Cap Construction': 'Breathable Mesh Cap with Adjustable Straps & Security Combs'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 15. LUXURY HAIR 2 - SDD Celebrity Fringe
@@ -873,8 +873,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Cap Type': 'Glueless Throw-on-and-Go Cap with Snaps',
       'Maintenance': 'Washable, heat-safe up to 230°C'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 16. LUXURY HAIR 3 - Jerry Curl 4x4
@@ -911,8 +911,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Texture': 'Jerry Curl (Juicy Coily Ringlets)',
       'Hair Care': 'Wet curl activator / water mist revival'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   },
 
   // 17. LUXURY HAIR 4 - Pixie Curl Water Friendly
@@ -948,8 +948,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Style': 'Cropped Tapered Pixie Cut with Layered Curls',
       'Wearability': 'Ready to wear in under 30 seconds'
     },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2026-01-15T10:00:00.000Z',
+    updatedAt: '2026-01-15T10:00:00.000Z',
   }
 ];
 

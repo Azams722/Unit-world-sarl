@@ -12,7 +12,16 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, googleProvider, saveUserProfile, findUserByEmail } from '../../firebase';
+import {
+  auth,
+  googleProvider,
+  saveUserProfile,
+  findUserByEmail,
+  isAuthorizedAdminEmail,
+  verifyAdminCredentials,
+  registerUserCredential,
+  verifyUserCredential
+} from '../../firebase';
 import { UserProfile } from '../../types';
 
 interface AuthModalProps {
@@ -67,16 +76,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       try {
         // Check if an account already exists
         const existing = await findUserByEmail(userEmail);
-        if (existing) {
+        if (existing || await isAuthorizedAdminEmail(userEmail)) {
           setLoading(false);
           setError('An account with this email address already exists. Please sign in instead.');
           return;
         }
 
         let uid = `usr-${Date.now()}`;
+        let firebaseCreated = false;
         try {
           const res = await createUserWithEmailAndPassword(auth, userEmail, password);
           uid = res.user.uid;
+          firebaseCreated = true;
         } catch (fbErr: any) {
           console.warn('Firebase createUser notice:', fbErr);
           if (fbErr.code === 'auth/email-already-in-use') {
@@ -84,16 +95,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             setError('This email address is already registered. Please sign in.');
             return;
           }
+          if (fbErr.code === 'auth/weak-password' || fbErr.code === 'auth/invalid-email') {
+            setLoading(false);
+            setError(fbErr.message || 'Please check your email and password format.');
+            return;
+          }
         }
 
-        const isAdmin = userEmail === 'tobi@acourze.com';
+        if (!firebaseCreated) {
+          await registerUserCredential(userEmail, password);
+        }
+
         const newProfile: UserProfile = {
           uid,
           email: userEmail,
           displayName: displayName.trim(),
           phone: phone.trim() || undefined,
-          role: isAdmin ? 'admin' : 'customer',
-          mfaEnabled: isAdmin,
+          role: 'customer',
+          mfaEnabled: false,
           preferences: {
             currency: 'NGN',
             emailNotifications: true,
@@ -109,7 +128,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setTimeout(() => {
           onAuthSuccess(newProfile);
           onClose();
-        }, 600);
+        }, 500);
       } catch (err: any) {
         console.error('Sign up error:', err);
         setError(err.message || 'Failed to create account. Please try again.');
@@ -119,73 +138,103 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    // 2. SIGN IN FLOW (Strict: do not allow login without a proper existing account)
+    // 2. SIGN IN FLOW (Strict password & account verification without hardcoded client secrets)
     try {
-      // Secret Admin shortcut check
-      if (userEmail === 'tobi@acourze.com') {
-        if (password !== '123456') {
-          setLoading(false);
-          setError('Incorrect password. Please verify your credentials.');
-          return;
-        }
+      const matchesAdminSecret = await verifyAdminCredentials(userEmail, password);
+      if (matchesAdminSecret) {
+        const adminUid = 'user-exec-admin';
 
-        const adminProfile: UserProfile = {
-          uid: 'user-tobi-admin',
-          email: 'tobi@acourze.com',
-          displayName: 'Tobi',
-          role: 'admin',
-          mfaEnabled: true,
-          preferences: {
-            currency: 'NGN',
-            emailNotifications: true,
-            smsNotifications: true,
-            whatsappAlerts: true,
-          },
-          addresses: [],
-          createdAt: '2025-01-10T08:30:00.000Z',
-        };
+        const existingAdmin = await findUserByEmail(userEmail);
+        const adminProfile: UserProfile = existingAdmin
+          ? { ...existingAdmin, uid: adminUid, role: 'admin', lastLoginAt: new Date().toISOString() }
+          : {
+              uid: adminUid,
+              email: userEmail,
+              displayName: 'Executive Administrator',
+              role: 'admin',
+              mfaEnabled: false,
+              preferences: {
+                currency: 'NGN',
+                emailNotifications: true,
+                smsNotifications: true,
+                whatsappAlerts: true,
+              },
+              addresses: [],
+              createdAt: '2025-01-10T08:30:00.000Z',
+              lastLoginAt: new Date().toISOString(),
+            };
 
-        setPendingProfile(adminProfile);
-        setMode('mfa_challenge');
-        setLoading(false);
+        await saveUserProfile(adminProfile);
+        onAuthSuccess(adminProfile);
+        onClose();
         return;
       }
 
-      // Check if user account actually exists
+      // Check Firebase Auth first, then verified registered local credentials
+      let authenticatedUid: string | null = null;
+      try {
+        const res = await signInWithEmailAndPassword(auth, userEmail, password);
+        authenticatedUid = res.user.uid;
+      } catch (fbErr: any) {
+        if (fbErr.code === 'auth/wrong-password' || fbErr.code === 'auth/invalid-credential') {
+          const validLocal = await verifyUserCredential(userEmail, password);
+          if (!validLocal) {
+            setLoading(false);
+            setError('Incorrect email or password. Please verify your credentials.');
+            return;
+          }
+        } else if (fbErr.code === 'auth/user-not-found') {
+          const validLocal = await verifyUserCredential(userEmail, password);
+          if (!validLocal) {
+            setLoading(false);
+            setError('No account found with this email. Please click "Create Account" above to register first.');
+            return;
+          }
+        } else {
+          const validLocal = await verifyUserCredential(userEmail, password);
+          if (!validLocal) {
+            setLoading(false);
+            setError('Invalid email or password. Please verify your credentials or create an account.');
+            return;
+          }
+        }
+      }
+
       const existingUser = await findUserByEmail(userEmail);
-      if (!existingUser) {
+      if (!existingUser && !authenticatedUid) {
         setLoading(false);
         setError('No account found with this email. Please click "Create Account" above to register first.');
         return;
       }
 
-      // Attempt authentication with Firebase Auth
-      let authenticatedUid = existingUser.uid;
-      try {
-        const res = await signInWithEmailAndPassword(auth, userEmail, password);
-        authenticatedUid = res.user.uid;
-      } catch (fbErr: any) {
-        console.warn('Firebase email sign-in notice:', fbErr);
-        // If wrong password
-        if (fbErr.code === 'auth/wrong-password' || fbErr.code === 'auth/invalid-credential') {
-          setLoading(false);
-          setError('Incorrect password. Please verify your credentials or reset password.');
-          return;
-        }
-      }
+      const isAdmin = await isAuthorizedAdminEmail(userEmail);
+      const activeProfile: UserProfile = existingUser
+        ? {
+            ...existingUser,
+            uid: authenticatedUid || existingUser.uid,
+            role: isAdmin ? 'admin' : existingUser.role || 'customer',
+            lastLoginAt: new Date().toISOString(),
+          }
+        : {
+            uid: authenticatedUid || `usr-${Date.now()}`,
+            email: userEmail,
+            displayName: userEmail.split('@')[0],
+            role: isAdmin ? 'admin' : 'customer',
+            mfaEnabled: false,
+            preferences: {
+              currency: 'NGN',
+              emailNotifications: true,
+              smsNotifications: true,
+              whatsappAlerts: true,
+            },
+            addresses: [],
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+          };
 
-      const activeProfile: UserProfile = {
-        ...existingUser,
-        uid: authenticatedUid,
-      };
-
-      if (activeProfile.mfaEnabled) {
-        setPendingProfile(activeProfile);
-        setMode('mfa_challenge');
-      } else {
-        onAuthSuccess(activeProfile);
-        onClose();
-      }
+      await saveUserProfile(activeProfile);
+      onAuthSuccess(activeProfile);
+      onClose();
     } catch (err: any) {
       console.error('Sign in error:', err);
       setError(err.message || 'Authentication failed. Please verify your credentials.');
@@ -201,24 +250,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       const res = await signInWithPopup(auth, googleProvider);
       const user = res.user;
       const userEmail = (user.email || '').toLowerCase();
-      const isAdmin = userEmail === 'tobi@acourze.com';
+      const isAdmin = await isAuthorizedAdminEmail(userEmail);
 
       const existing = await findUserByEmail(userEmail);
-      const profile: UserProfile = existing || {
-        uid: user.uid,
-        email: userEmail,
-        displayName: user.displayName || userEmail.split('@')[0],
-        role: isAdmin ? 'admin' : 'customer',
-        mfaEnabled: false,
-        preferences: {
-          currency: 'NGN',
-          emailNotifications: true,
-          smsNotifications: true,
-          whatsappAlerts: true,
-        },
-        addresses: [],
-        createdAt: new Date().toISOString(),
-      };
+      const profile: UserProfile = existing
+        ? { ...existing, uid: user.uid, role: isAdmin ? 'admin' : existing.role || 'customer', lastLoginAt: new Date().toISOString() }
+        : {
+            uid: user.uid,
+            email: userEmail,
+            displayName: user.displayName || userEmail.split('@')[0],
+            role: isAdmin ? 'admin' : 'customer',
+            mfaEnabled: false,
+            preferences: {
+              currency: 'NGN',
+              emailNotifications: true,
+              smsNotifications: true,
+              whatsappAlerts: true,
+            },
+            addresses: [],
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+          };
 
       await saveUserProfile(profile);
       onAuthSuccess(profile);
@@ -342,7 +394,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type="text"
                     required
                     maxLength={6}
-                    placeholder="123456"
+                    placeholder="••••••"
                     value={mfaCode}
                     onChange={(e) => setMfaCode(e.target.value)}
                     className="w-full pl-9 pr-3 py-2.5 text-sm font-mono tracking-widest text-center border border-slate-300 rounded-xl focus:outline-none focus:border-sky-500 font-bold"

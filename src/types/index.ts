@@ -22,6 +22,7 @@ export interface Product {
   brand?: string;
   warranty?: string;
   omittedFields?: string[];
+  isArchived?: boolean;
   createdAt: string;
   updatedAt: string;
 }
