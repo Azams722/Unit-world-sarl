@@ -43,7 +43,8 @@ import {
   Film,
   CreditCard,
   Lock,
-  Building2
+  Building2,
+  Bot
 } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { Product, Order, GatewaySettings, BrandSettings, OrderStatus, AdminUser, UserProfile } from '../../types';
@@ -65,6 +66,7 @@ import {
 import { processMediaFile, recompressDataUrl } from '../../utils/mediaStorage';
 import { MediaViewer } from '../common/MediaViewer';
 import { MediaUploaderModal } from './MediaUploaderModal';
+import { ProductBotPanel } from './ProductBotPanel';
 
 const PRESET_IMAGE_ASSETS = [
   { label: '2025 Land Cruiser VXR Front', url: '/assets/images/car_landcruiser_vxr_1790462842346.jpg' },
@@ -149,7 +151,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onMakeCurrentUserAdmin,
   onUpdateUser,
 }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'media' | 'orders' | 'users' | 'admins' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'bot' | 'media' | 'orders' | 'users' | 'admins' | 'settings'>('products');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccessMsg, setSyncSuccessMsg] = useState('');
   const [isBatchMediaOpen, setIsBatchMediaOpen] = useState(false);
@@ -1369,6 +1371,22 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
           <button
             onClick={() => {
+              setActiveTab('bot');
+              setEditingProduct(null);
+              setIsCreatingProduct(false);
+            }}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'bot'
+                ? 'border-[#0284C7] text-[#0284C7] bg-white'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Bot className="w-4 h-4 text-sky-600" />
+            <span>AI Product Bot</span>
+          </button>
+
+          <button
+            onClick={() => {
               setActiveTab('media');
               setEditingProduct(null);
               setIsCreatingProduct(false);
@@ -1466,6 +1484,37 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
         {/* ERP Main Body */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50">
+          {/* TAB: AI PRODUCT BOT */}
+          {activeTab === 'bot' && (
+            <ProductBotPanel
+              onCreateProduct={async (newProduct) => {
+                await onCreateProduct(newProduct);
+                setProductSearch('');
+                setSelectedCategoryFilter('All');
+              }}
+              onOpenInEditor={(botProduct) => {
+                const alreadyPublished = products.some((p) => p.id === botProduct.id);
+                handleStartEdit(botProduct);
+                if (!alreadyPublished) {
+                  setEditingProduct(null);
+                  setIsCreatingProduct(true);
+                }
+                setActiveTab('products');
+              }}
+              onGoToInventory={() => {
+                setProductSearch('');
+                setSelectedCategoryFilter('All');
+                setEditingProduct(null);
+                setIsCreatingProduct(false);
+                setActiveTab('products');
+              }}
+              onNotifySuccess={(msg) => {
+                setSyncSuccessMsg(msg);
+                setTimeout(() => setSyncSuccessMsg(''), 6000);
+              }}
+            />
+          )}
+
           {/* TAB: MEDIA VAULT & GALLERIES (ADMIN BACKEND ONLY) */}
           {activeTab === 'media' && (() => {
             const currentSelectedProduct = products.find(p => p.id === (selectedMediaProductId || (products[0]?.id || ''))) || products[0];
@@ -2642,7 +2691,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       </select>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                      <button
+                        onClick={() => {
+                          setActiveTab('bot');
+                        }}
+                        className="py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                        title="Upload image(s) + description and let the bot convert it to a full product"
+                      >
+                        <Bot className="w-3.5 h-3.5 text-sky-400" />
+                        <span>AI Product Bot</span>
+                      </button>
+
                       <button
                         onClick={() => {
                           setActiveTab('media');
