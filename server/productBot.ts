@@ -179,16 +179,71 @@ export async function convertInputToProduct(
     '- Return strictly valid JSON matching the schema.',
   ].join('\n');
 
-  let lastError: unknown = null;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const formatApiError = (err: unknown): Error => {
+    const raw = err instanceof Error ? err.message : String(err);
+    let readable = raw;
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-4-hydrogen',
-        contents: { parts },
-        config: {
-          systemInstruction,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-          responseMimeType: 'application/json',
+      const parsed = JSON.parse(raw);
+      if (parsed?.error?.message) readable = parsed.error.message;
+      else if (parsed?.message) readable = parsed.message;
+    } catch {
+      // keep raw message
+    }
+    if (readable.includes('API_KEY_INVALID') || readable.includes('API key not valid')) {
+      return new Error(
+        'Invalid Gemini API key. Please check GEMINI_API_KEY in Settings > Secrets (or your hosting Environment Variables).'
+      );
+    }
+    if (readable.includes('PERMISSION_DENIED')) {
+      return new Error(
+        'Gemini API permission denied (403). Please verify your GEMINI_API_KEY in Settings > Secrets.'
+      );
+    }
+    if (readable.includes('RESOURCE_EXHAUSTED')) {
+      return new Error(
+        'Gemini API quota limit reached (429). Please wait a moment or select a higher-quota key in Settings > Secrets.'
+      );
+    }
+    if (readable.includes('high demand') || readable.includes('UNAVAILABLE') || readable.includes('503')) {
+      return new Error(
+        'Gemini servers are temporarily busy (503 high demand). Your API key is working — please wait a few seconds and click Convert again.'
+      );
+    }
+    return new Error(readable);
+  };
+
+  const modelSequence: Array<{ model: string; waitMs: number; timeoutMs: number }> = [
+    { model: 'gemini-4-hydrogen', waitMs: 0, timeoutMs: 14000 },
+    { model: 'gemini-3.1-flash-lite', waitMs: 400, timeoutMs: 14000 },
+    { model: 'gemini-4-hydrogen', waitMs: 900, timeoutMs: 14000 },
+  ];
+
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, modelName: string): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Request timed out on ${modelName} after ${ms}ms`)), ms)
+      ),
+    ]);
+
+  let lastError: unknown = null;
+  for (const step of modelSequence) {
+    if (step.waitMs > 0) {
+      await sleep(step.waitMs);
+    }
+    try {
+      const response = await withTimeout(
+        ai.models.generateContent({
+          model: step.model,
+          contents: { parts },
+          config: {
+            systemInstruction,
+            ...(step.model === 'gemini-4-hydrogen'
+              ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } }
+              : {}),
+            responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
             properties: {
@@ -278,7 +333,10 @@ export async function convertInputToProduct(
             ],
           },
         },
-      });
+        }),
+        step.timeoutMs,
+        step.model
+      );
 
       const rawJson = (response.text ?? '').trim();
       if (!rawJson) {
@@ -378,15 +436,14 @@ export async function convertInputToProduct(
       const errMsg = err instanceof Error ? err.message : String(err);
       if (
         errMsg.includes('API_KEY_INVALID') ||
+        errMsg.includes('API key not valid') ||
         errMsg.includes('PERMISSION_DENIED') ||
         errMsg.includes('GEMINI_API_KEY is not configured')
       ) {
-        throw err;
+        throw formatApiError(err);
       }
     }
   }
 
-  throw lastError instanceof Error
-    ? lastError
-    : new Error('Product conversion bot failed to process request.');
+  throw formatApiError(lastError);
 }

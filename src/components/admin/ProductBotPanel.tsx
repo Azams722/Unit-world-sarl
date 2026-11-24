@@ -70,7 +70,7 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
     try {
       const compressedList: string[] = [];
       for (const file of fileArr.slice(0, 6)) {
-        const dataUrl = await compressImageToDataUrl(file, 1100, 0.8);
+        const dataUrl = await compressImageToDataUrl(file, 850, 0.75);
         compressedList.push(dataUrl);
       }
       setUploadedImages((prev) => {
@@ -232,7 +232,15 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
       setLocationHint('');
     } catch (err: any) {
       console.error('Product Bot conversion error:', err);
-      setErrorMsg(err?.message || 'Failed to convert input into a product.');
+      let msg = err?.message || 'Failed to convert input into a product.';
+      try {
+        const parsed = JSON.parse(msg);
+        if (parsed?.error?.message) msg = parsed.error.message;
+        else if (parsed?.message) msg = parsed.message;
+      } catch {
+        // Keep message as-is
+      }
+      setErrorMsg(msg);
     } finally {
       setIsConverting(false);
     }
@@ -301,9 +309,19 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
         className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-5 text-xs"
       >
         {errorMsg && (
-          <div className="p-3.5 bg-rose-50 border border-rose-300 text-rose-800 rounded-xl flex items-start gap-2.5 font-semibold">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <span>{errorMsg}</span>
+          <div className="p-3.5 bg-rose-50 border border-rose-300 text-rose-800 rounded-xl flex flex-wrap items-center justify-between gap-2.5 font-semibold">
+            <div className="flex items-start gap-2.5 flex-1 min-w-[200px]">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+            <button
+              type="submit"
+              disabled={isConverting}
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer shrink-0"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>Retry</span>
+            </button>
           </div>
         )}
 

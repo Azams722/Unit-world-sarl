@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   LayoutDashboard, 
@@ -241,6 +241,28 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [brandEmail, setBrandEmail] = useState(brandSettings.supportEmail);
   const [brandWhatsApp, setBrandWhatsApp] = useState(brandSettings.whatsappNumber);
   const [brandAddress, setBrandAddress] = useState(brandSettings.address);
+
+  useEffect(() => {
+    setPaystackKey(gatewaySettings.paystackPublicKey || '');
+    setPaystackSecretKey(gatewaySettings.paystackSecretKey || '');
+    setPaystackActive(gatewaySettings.paystackEnabled || false);
+    setMerchantEmail(gatewaySettings.merchantEmail || 'payments@unit-world-sarl.com');
+    setMerchantBusinessName(gatewaySettings.merchantBusinessName || 'UNITWORLD SARL GLOBAL COMMERCE');
+    setWebhookUrl(gatewaySettings.webhookUrl || 'https://api.unit-world-sarl.com/webhook/paystack');
+    setBankName(gatewaySettings.bankAccountDetails?.bankName || 'Guaranty Trust Bank (GTBank)');
+    setAccountName(gatewaySettings.bankAccountDetails?.accountName || 'UNITWORLD SARL GLOBAL COMMERCE');
+    setAccountNumber(gatewaySettings.bankAccountDetails?.accountNumber || '0284729104');
+  }, [gatewaySettings]);
+
+  useEffect(() => {
+    setBrandLogoUrl(brandSettings.logoUrl || DEFAULT_BRAND_LOGO);
+    setBrandNameState(brandSettings.brandName);
+    setBrandTagline(brandSettings.tagline);
+    setBrandPhone(brandSettings.supportPhone);
+    setBrandEmail(brandSettings.supportEmail);
+    setBrandWhatsApp(brandSettings.whatsappNumber);
+    setBrandAddress(brandSettings.address);
+  }, [brandSettings]);
 
   // Order fulfillment state
   const [statusNote, setStatusNote] = useState('');
