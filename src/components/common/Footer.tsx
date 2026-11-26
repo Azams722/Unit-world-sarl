@@ -1,14 +1,15 @@
 import React from 'react';
-import { ShieldCheck, Truck, Headphones, Lock, FileText } from 'lucide-react';
+import { ShieldCheck, Truck, Headphones, Lock, FileText, PhoneCall, Wrench } from 'lucide-react';
 import { UnitworldLogo } from './UnitworldLogo';
 
 interface FooterProps {
   logoUrl?: string;
   onOpenAdmin?: () => void;
   onOpenRefundPolicy?: () => void;
+  onOpenServices?: (categoryId?: string) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin, onOpenRefundPolicy }) => {
+export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin, onOpenRefundPolicy, onOpenServices }) => {
   return (
     <footer className="bg-slate-900 text-slate-300 border-t border-slate-800">
       {/* Trust Pillars Strip */}
@@ -68,6 +69,24 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, onOpenAdmin, onOpenRefu
             <p className="text-xs text-slate-400">
               Showrooms in Victoria Island, Ikeja GRA, and Igando, Lagos, Nigeria.
             </p>
+            <div className="pt-1 flex flex-col gap-1.5 text-xs">
+              <a
+                href="tel:07070554285"
+                className="inline-flex items-center gap-1.5 text-sky-400 hover:text-sky-300 font-bold tabular-nums"
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Direct Line / WhatsApp: 07070554285</span>
+              </a>
+              {onOpenServices && (
+                <button
+                  onClick={() => onOpenServices()}
+                  className="inline-flex items-center gap-1.5 text-amber-400 hover:text-amber-300 font-semibold cursor-pointer text-left"
+                >
+                  <Wrench className="w-3.5 h-3.5" />
+                  <span>Book Carpentry, Plumbing & Tech Services →</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Buying & Selling */}

@@ -15,11 +15,18 @@ import {
   MapPin,
   Package,
   Plus,
+  Film,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { CATEGORIES } from '../../data/initialProducts';
 import { formatCurrency } from '../../utils/formatters';
-import { compressImageToDataUrl, recompressDataUrl } from '../../utils/mediaStorage';
+import {
+  compressImageToDataUrl,
+  recompressDataUrl,
+  processMediaFile,
+  MAX_VIDEO_SIZE_BYTES,
+} from '../../utils/mediaStorage';
+import { MediaViewer } from '../common/MediaViewer';
 
 interface ProductBotPanelProps {
   onCreateProduct: (product: Product) => Promise<void>;
@@ -44,6 +51,7 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
   onNotifySuccess,
 }) => {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadedVideos, setUploadedVideos] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [rawDescription, setRawDescription] = useState('');
   const [overridePrice, setOverridePrice] = useState('');
@@ -53,6 +61,7 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
 
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -97,9 +106,39 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
     setUploadedImages((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  const handleVideoSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setErrorMsg(null);
+    setIsUploadingVideo(true);
+    try {
+      for (const file of Array.from(files).slice(0, 2)) {
+        if (file.size > MAX_VIDEO_SIZE_BYTES) {
+          throw new Error(
+            `Video "${file.name}" is ${(file.size / (1024 * 1024)).toFixed(2)}MB. Maximum allowed video size is 2MB.`
+          );
+        }
+        const processed = await processMediaFile(file);
+        if (processed.isVideo && processed.url) {
+          setUploadedVideos((prev) =>
+            prev.includes(processed.url) ? prev : [...prev, processed.url].slice(0, 2)
+          );
+        }
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to upload video (2MB max).');
+    } finally {
+      setIsUploadingVideo(false);
+    }
+  };
+
+  const handleRemoveVideo = (index: number) => {
+    setUploadedVideos((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
   const buildFirestoreSafeProduct = async (
     draft: any,
-    fallbackImages: string[]
+    fallbackImages: string[],
+    fallbackVideos: string[]
   ): Promise<Product> => {
     const now = new Date().toISOString();
     let finalImages: string[] =
@@ -122,6 +161,7 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
       category: String(draft.category || 'Official Store'),
       condition: String(draft.condition || 'Brand New'),
       images: imgs,
+      videos: fallbackVideos.length > 0 ? fallbackVideos : undefined,
       stock: Math.max(1, Number(draft.stock) || 1),
       sku: String(draft.sku || `UW-BOT-${Math.floor(1000 + Math.random() * 9000)}`),
       seller: 'Unitworld Sarl',
@@ -201,7 +241,8 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
 
       const product = await buildFirestoreSafeProduct(
         data.productDraft,
-        uploadedImages
+        uploadedImages,
+        uploadedVideos
       );
 
       let entryStatus: 'published' | 'draft' = 'draft';
@@ -226,6 +267,7 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
 
       setHistory((prev) => [newEntry, ...prev]);
       setUploadedImages([]);
+      setUploadedVideos([]);
       setImageUrlInput('');
       setRawDescription('');
       setOverridePrice('');
@@ -430,6 +472,50 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
                 ))}
               </div>
             )}
+
+            {/* Optional 2MB Max Video Uploader */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+                  <Film className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Optional Showcase Video (2MB Max)</span>
+                </span>
+                <label className="inline-flex items-center gap-1 py-1 px-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-[11px] cursor-pointer">
+                  <Upload className="w-3 h-3 text-sky-400" />
+                  <span>{isUploadingVideo ? 'Uploading...' : 'Add Video'}</span>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime,video/*"
+                    disabled={isUploadingVideo || isConverting}
+                    onChange={(e) => {
+                      handleVideoSelected(e.target.files);
+                      e.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              {uploadedVideos.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {uploadedVideos.map((vid, idx) => (
+                    <div
+                      key={vid}
+                      className="relative aspect-video rounded-lg overflow-hidden border border-slate-300 bg-black"
+                    >
+                      <MediaViewer url={vid} isVideo={true} controls={true} className="w-full h-full object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveVideo(idx)}
+                        className="absolute top-1 right-1 p-1 bg-rose-600/90 hover:bg-rose-700 text-white rounded shadow cursor-pointer z-10"
+                        title="Remove video"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right: Description & Optional Hints */}
@@ -527,7 +613,7 @@ export const ProductBotPanel: React.FC<ProductBotPanelProps> = ({
 
               <button
                 type="submit"
-                disabled={isConverting || isProcessingImages}
+                disabled={isConverting || isProcessingImages || isUploadingVideo}
                 className="py-2.5 px-5 bg-[#0284C7] hover:bg-[#0369a1] disabled:bg-slate-400 text-white font-black rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
               >
                 {isConverting ? (

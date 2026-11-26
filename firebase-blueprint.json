@@ -219,6 +219,118 @@
           "description": "Whether Paystack gateway is active"
         }
       }
+    },
+    "VideoMediaChunk": {
+      "title": "VideoMediaChunk",
+      "description": "Chunked binary storage for 2MB-max storefront and product showcase videos",
+      "type": "object",
+      "properties": {
+        "videoId": {
+          "type": "string",
+          "description": "Logical video identifier",
+          "maxLength": 128
+        },
+        "chunkIndex": {
+          "type": "number",
+          "description": "Zero-based chunk index"
+        },
+        "totalChunks": {
+          "type": "number",
+          "description": "Total chunk count for this video (max 6)"
+        },
+        "mimeType": {
+          "type": "string",
+          "description": "Video MIME type (e.g. video/mp4)",
+          "maxLength": 64
+        },
+        "size": {
+          "type": "number",
+          "description": "Original video file byte size (max 2MB)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation ISO timestamp"
+        }
+      },
+      "required": ["videoId", "chunkIndex", "totalChunks", "mimeType", "size"]
+    },
+    "ServiceBooking": {
+      "title": "ServiceBooking",
+      "description": "On-demand skilled artisan and technical service booking (carpentry, plumbing, electrical, auto, cleaning)",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique service booking ID",
+          "maxLength": 128
+        },
+        "bookingCode": {
+          "type": "string",
+          "description": "Human-readable service booking code",
+          "maxLength": 40
+        },
+        "serviceCategory": {
+          "type": "string",
+          "description": "Primary trade or service category",
+          "maxLength": 80
+        },
+        "subService": {
+          "type": "string",
+          "description": "Specific sub-service task selected",
+          "maxLength": 120
+        },
+        "location": {
+          "type": "string",
+          "description": "Customer service address or area",
+          "maxLength": 300
+        },
+        "details": {
+          "type": "string",
+          "description": "Customer description of work required",
+          "maxLength": 2000
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Optional customer contact phone",
+          "maxLength": 30
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Optional customer name",
+          "maxLength": 120
+        },
+        "urgency": {
+          "type": "string",
+          "description": "Preferred timing or urgency level",
+          "maxLength": 40
+        },
+        "sourceSection": {
+          "type": "string",
+          "description": "Page or homepage section where booking was submitted",
+          "maxLength": 80
+        },
+        "userId": {
+          "type": "string",
+          "description": "Optional authenticated user UID",
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "description": "Dispatch status: pending, assigned, in_progress, completed, cancelled",
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Booking creation ISO timestamp",
+          "maxLength": 40
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Booking update ISO timestamp",
+          "maxLength": 40
+        }
+      },
+      "required": ["id", "bookingCode", "serviceCategory", "subService", "location", "details", "status", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -237,6 +349,15 @@
     "/settings/{settingId}": {
       "schema": "Setting",
       "description": "Marketplace global settings and payment configurations"
+    },
+    "/videoMedia/{chunkId}": {
+      "schema": "VideoMediaChunk",
+      "description": "Chunked binary storage for 2MB-max videos"
+    },
+    "/serviceBookings/{bookingId}": {
+      "schema": "ServiceBooking",
+      "description": "On-demand service dispatch requests (carpentry, plumbing, electrical, auto, cleaning)"
     }
   }
 }
+

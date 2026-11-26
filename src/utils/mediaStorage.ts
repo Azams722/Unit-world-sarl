@@ -1,9 +1,10 @@
+import { uploadVideoChunksToDb, fetchVideoBlobFromDb, MAX_VIDEO_SIZE_BYTES } from '../firebase';
+
 /**
  * High-Performance Client-Side Media Vault & Storage Utility
  * - Compresses high-resolution photos in-browser using HTML5 Canvas (~120KB per photo)
- * - Persists large video files (MP4, WebM, MOV) natively in IndexedDB
- * - Provides seamless synchronization with Firestore (well under 1MB document limit)
- * - Generates streaming Object URLs for instant, smooth video playback
+ * - Uploads <=2MB videos in binary chunks to Firestore so all storefront visitors can play them
+ * - Caches media locally in IndexedDB & Object URLs for instant replay
  */
 
 const DB_NAME = 'unitworld_media_vault_v2';
@@ -150,74 +151,109 @@ export async function recompressDataUrl(
   });
 }
 
+export { MAX_VIDEO_SIZE_BYTES };
+
+export const STORE_VIDEO_SECTIONS = [
+  { key: 'hero', label: 'Hero Showcase Banner' },
+  { key: 'automobiles', label: 'Automobiles & Heavy Motors Showroom' },
+  { key: 'everyday', label: 'Everyday Essentials & Home Appliances' },
+  { key: 'hair', label: 'Luxury Human Hair & Wigs Collection' },
+  { key: 'fashion', label: 'Fashion Hub (All Clothes ₦25,000)' },
+  { key: 'groceries', label: 'Supermarket & Farm Raw Foods' },
+] as const;
+
+async function cacheBlobInIndexedDb(id: string, blob: Blob, filename: string): Promise<void> {
+  try {
+    const db = await getMediaDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction([STORE_MEDIA], 'readwrite');
+      const store = tx.objectStore(STORE_MEDIA);
+      const req = store.put({
+        id,
+        blob,
+        filename,
+        type: blob.type || 'video/mp4',
+        size: blob.size,
+        createdAt: new Date().toISOString(),
+      });
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    // Ignore IndexedDB quota/privacy issues when Firestore cloud backup succeeds
+  }
+}
+
+async function readBlobFromIndexedDb(id: string): Promise<Blob | null> {
+  try {
+    const db = await getMediaDb();
+    return await new Promise<Blob | null>((resolve) => {
+      const tx = db.transaction([STORE_MEDIA], 'readonly');
+      const store = tx.objectStore(STORE_MEDIA);
+      const req = store.get(id);
+      req.onsuccess = () => resolve(req.result?.blob || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Stores a video file into IndexedDB and returns a persistent custom URI
+ * Validates 2MB max limit, stores video chunks in Firestore (so all visitors can play it),
+ * and caches locally in IndexedDB for instant playback.
  */
 export async function storeVideoFile(
   file: File
 ): Promise<{ uri: string; objectUrl: string; size: number }> {
-  const db = await getMediaDb();
-  const id = `idb:video:${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+  if (file.size > MAX_VIDEO_SIZE_BYTES) {
+    throw new Error(
+      `Video "${file.name}" is ${(file.size / (1024 * 1024)).toFixed(2)}MB, exceeding the 2MB maximum video limit.`
+    );
+  }
 
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction([STORE_MEDIA], 'readwrite');
-    const store = tx.objectStore(STORE_MEDIA);
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 60);
+  const videoId = `vid_${Date.now()}_${safeName}`;
+  const uri = `fs:video:${videoId}`;
 
-    const record = {
-      id,
-      blob: file,
-      filename: file.name,
-      type: file.type || 'video/mp4',
-      size: file.size,
-      createdAt: new Date().toISOString()
-    };
+  await uploadVideoChunksToDb(videoId, file);
+  await cacheBlobInIndexedDb(uri, file, file.name);
 
-    const req = store.put(record);
-
-    req.onsuccess = () => {
-      const objectUrl = URL.createObjectURL(file);
-      blobUrlCache.set(id, objectUrl);
-      resolve({ uri: id, objectUrl, size: file.size });
-    };
-
-    req.onerror = () => reject(req.error);
-  });
+  const objectUrl = URL.createObjectURL(file);
+  blobUrlCache.set(uri, objectUrl);
+  return { uri, objectUrl, size: file.size };
 }
 
 /**
- * Resolves any media string (IndexedDB URI, Data URL, Cloud URL) to a playable/displayable URL
+ * Resolves any media string (Firestore video URI, IndexedDB URI, Data URL, Cloud URL) to a playable/displayable URL
  */
 export async function resolveMediaUrl(uri: string): Promise<string> {
   if (!uri) return '';
-  if (!uri.startsWith('idb:')) return uri;
+  if (!uri.startsWith('idb:') && !uri.startsWith('fs:video:')) return uri;
 
   if (blobUrlCache.has(uri)) {
     return blobUrlCache.get(uri)!;
   }
 
-  try {
-    const db = await getMediaDb();
-    return new Promise((resolve) => {
-      const tx = db.transaction([STORE_MEDIA], 'readonly');
-      const store = tx.objectStore(STORE_MEDIA);
-      const req = store.get(uri);
-
-      req.onsuccess = () => {
-        const item = req.result;
-        if (item && item.blob) {
-          const url = URL.createObjectURL(item.blob);
-          blobUrlCache.set(uri, url);
-          resolve(url);
-        } else {
-          resolve('');
-        }
-      };
-
-      req.onerror = () => resolve('');
-    });
-  } catch {
-    return '';
+  const cachedBlob = await readBlobFromIndexedDb(uri);
+  if (cachedBlob) {
+    const url = URL.createObjectURL(cachedBlob);
+    blobUrlCache.set(uri, url);
+    return url;
   }
+
+  if (uri.startsWith('fs:video:')) {
+    const videoId = uri.slice('fs:video:'.length);
+    const remoteBlob = await fetchVideoBlobFromDb(videoId);
+    if (remoteBlob) {
+      await cacheBlobInIndexedDb(uri, remoteBlob, videoId);
+      const url = URL.createObjectURL(remoteBlob);
+      blobUrlCache.set(uri, url);
+      return url;
+    }
+  }
+
+  return '';
 }
 
 export interface ProcessedMediaItem {
@@ -230,7 +266,7 @@ export interface ProcessedMediaItem {
 }
 
 /**
- * Universal media processor: processes images (compressed Data URL) and videos (IndexedDB Blob)
+ * Universal media processor: processes images (compressed Data URL) and videos (2MB max -> Firestore + IndexedDB cache)
  */
 export async function processMediaFile(file: File): Promise<ProcessedMediaItem> {
   const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name);

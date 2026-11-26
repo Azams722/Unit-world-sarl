@@ -12,7 +12,8 @@ import {
   LogOut, 
   Bell,
   ChevronDown,
-  Upload
+  Upload,
+  Wrench
 } from 'lucide-react';
 import { UnitworldLogo } from './UnitworldLogo';
 import { CATEGORIES } from '../../data/initialProducts';
@@ -34,6 +35,8 @@ interface HeaderProps {
   brandLogoUrl?: string;
   onGoHome?: () => void;
   onOpenAdmin?: () => void;
+  onOpenServices?: (categoryId?: string) => void;
+  isServicesActive?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -52,6 +55,8 @@ export const Header: React.FC<HeaderProps> = ({
   brandLogoUrl,
   onGoHome,
   onOpenAdmin,
+  onOpenServices,
+  isServicesActive = false,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -69,13 +74,25 @@ export const Header: React.FC<HeaderProps> = ({
               <ShieldCheck className="w-3.5 h-3.5" />
               Unitworld Official Guarantee: 100% Verified Delivery
             </span>
-            <span className="flex items-center gap-1.5">
+            <a
+              href="tel:07070554285"
+              className="flex items-center gap-1.5 hover:text-white transition-colors tabular-nums"
+            >
               <PhoneCall className="w-3.5 h-3.5 text-slate-400" />
-              Hotline: +234 800 UNITWORLD (0800 8648 967)
-            </span>
+              <span>Hotline: 07070554285</span>
+            </a>
           </div>
 
           <div className="flex items-center gap-5 text-slate-300">
+            {onOpenServices && (
+              <button
+                onClick={() => onOpenServices()}
+                className="hover:text-sky-300 text-sky-400 font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                Book Services
+              </button>
+            )}
             {onOpenAdmin && (
               <button
                 onClick={onOpenAdmin}
@@ -323,8 +340,21 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Category Navigation Bar (Desktop Department Strip) */}
       <div className="border-t border-slate-100 bg-slate-50 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 flex items-center overflow-x-auto scrollbar-none py-1.5 gap-1">
+          {onOpenServices && (
+            <button
+              onClick={() => onOpenServices()}
+              className={`px-3 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0 ${
+                isServicesActive
+                  ? 'bg-slate-900 text-white shadow-2xs'
+                  : 'bg-sky-50 text-[#0284C7] hover:bg-sky-100 border border-sky-200'
+              }`}
+            >
+              <Wrench className="w-3.5 h-3.5" />
+              <span>Book Services</span>
+            </button>
+          )}
           {CATEGORIES.map((cat) => {
-            const isActive = selectedCategory === cat.name;
+            const isActive = !isServicesActive && selectedCategory === cat.name;
             return (
               <button
                 key={cat.name}
@@ -357,6 +387,18 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="py-3 border-b border-slate-100 space-y-2">
+              {onOpenServices && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenServices();
+                  }}
+                  className="w-full text-left px-3 py-2 bg-sky-50 border border-sky-200 text-sky-900 font-bold text-xs rounded-lg flex items-center gap-2"
+                >
+                  <Wrench className="w-4 h-4 text-[#0284C7]" />
+                  Book Pro Services (Carpentry, Plumbing...)
+                </button>
+              )}
               {currentUser?.role === 'admin' && onOpenAdmin && (
                 <button
                   onClick={() => {
@@ -379,6 +421,13 @@ export const Header: React.FC<HeaderProps> = ({
                 <Truck className="w-4 h-4" />
                 Track Order
               </button>
+              <a
+                href="tel:07070554285"
+                className="w-full text-left px-3 py-2 bg-slate-100 text-slate-800 font-semibold text-xs rounded-lg flex items-center gap-2 tabular-nums"
+              >
+                <PhoneCall className="w-4 h-4 text-[#0284C7]" />
+                Call Hotline: 07070554285
+              </a>
             </div>
 
             <div className="pt-3">

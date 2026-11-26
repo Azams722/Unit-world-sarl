@@ -15,7 +15,8 @@ import {
   CheckCircle2, 
   Filter, 
   ArrowUpDown,
-  Laptop
+  Laptop,
+  Wrench
 } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, onSnapshot, doc } from 'firebase/firestore';
@@ -46,9 +47,11 @@ import {
   DEFAULT_ADMINS,
   isAuthorizedAdminEmail,
   saveActiveSession,
-  loadActiveSession
+  loadActiveSession,
+  createServiceBookingInDb,
+  updateServiceBookingStatusInDb
 } from './firebase';
-import { Product, Order, OrderItem, UserProfile, GatewaySettings, BrandSettings, AppNotification, OrderStatus, AdminUser } from './types';
+import { Product, Order, OrderItem, UserProfile, GatewaySettings, BrandSettings, AppNotification, OrderStatus, AdminUser, ServiceBooking, ServiceBookingStatus } from './types';
 import { Header } from './components/common/Header';
 import { Footer } from './components/common/Footer';
 import { MobileBottomNav } from './components/common/MobileBottomNav';
@@ -63,6 +66,10 @@ import { AuthModal } from './components/auth/AuthModal';
 import { CustomerDashboard } from './components/customer/CustomerDashboard';
 import { AdminPortal } from './components/admin/AdminPortal';
 import { RefundPolicyModal } from './components/common/RefundPolicyModal';
+import { MediaViewer } from './components/common/MediaViewer';
+import { ServicesPage } from './components/services/ServicesPage';
+import { QuickServiceStrip } from './components/services/QuickServiceStrip';
+import { NewProductsHeroCarousel } from './components/shop/NewProductsHeroCarousel';
 import { formatCurrency, generateProductSlug } from './utils/formatters';
 import { CATEGORIES, INITIAL_PRODUCTS } from './data/initialProducts';
 
@@ -104,6 +111,9 @@ export default function App() {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isRefundPolicyOpen, setIsRefundPolicyOpen] = useState(false);
+  const [isServicesOpen, setIsServicesOpen] = useState(false);
+  const [servicesCategoryId, setServicesCategoryId] = useState<string | undefined>(undefined);
+  const [serviceBookings, setServiceBookings] = useState<ServiceBooking[]>([]);
   const [admins, setAdmins] = useState<AdminUser[]>(DEFAULT_ADMINS);
   const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
 
@@ -116,14 +126,27 @@ export default function App() {
 
   const handleSelectProduct = (product: Product) => {
     const slug = generateProductSlug(product);
+    setIsServicesOpen(false);
     setProductPageProduct(product);
     setSelectedProduct(null);
     navigateTo(`/product/${slug}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleOpenServicesPage = (categoryId?: string) => {
+    setProductPageProduct(null);
+    setSelectedProduct(null);
+    setServicesCategoryId(categoryId);
+    setIsServicesOpen(true);
+    setMobileTab('services');
+    navigateTo(categoryId ? `/services/${categoryId}` : '/services');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleBackFromProductPage = () => {
     setProductPageProduct(null);
+    setIsServicesOpen(false);
+    setMobileTab('home');
     navigateTo('/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -222,6 +245,15 @@ export default function App() {
         setProductPageProduct(null);
       }
 
+      if (path === '/services' || path.startsWith('/services/')) {
+        const subCat = path.replace(/^\/services\/?/, '').trim();
+        setServicesCategoryId(subCat || undefined);
+        setIsServicesOpen(true);
+        setMobileTab('services');
+      } else {
+        setIsServicesOpen(false);
+      }
+
       if (path === '/auth' || path === '/login' || path === '/signup' || path === '/register') {
         setIsAuthOpen(true);
       } else if (path === '/dashboard' || path === '/account' || path === '/profile') {
@@ -262,7 +294,7 @@ export default function App() {
   }, [products]);
 
   // Mobile Bottom Tab
-  const [mobileTab, setMobileTab] = useState<'home' | 'categories' | 'shop' | 'cart' | 'account'>('home');
+  const [mobileTab, setMobileTab] = useState<'home' | 'categories' | 'services' | 'cart' | 'account'>('home');
 
   // Notifications
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -311,27 +343,49 @@ export default function App() {
       if (!snapshot.empty) {
         const liveProducts: Product[] = [];
         snapshot.forEach((d) => {
-          const prod = d.data() as Product;
+          const raw = d.data() as Partial<Product>;
+          const prodId = typeof raw.id === 'string' && raw.id.trim() ? raw.id : d.id;
           if (
-            prod.isArchived ||
-            prod.id === 'prod-dettol-antiseptic-1l' ||
-            prod.id === 'prod-jumia-dettol-antiseptic-1l' ||
-            prod.id.startsWith('prod-jumia-') ||
-            prod.sku?.includes('HEALTH') ||
-            prod.tags?.includes('First Aid')
+            !raw ||
+            raw.isArchived ||
+            typeof raw.title !== 'string' ||
+            !raw.title.trim() ||
+            typeof raw.category !== 'string' ||
+            !raw.category.trim() ||
+            typeof raw.price !== 'number' ||
+            !Number.isFinite(raw.price) ||
+            prodId === 'prod-dettol-antiseptic-1l' ||
+            prodId === 'prod-jumia-dettol-antiseptic-1l' ||
+            prodId.startsWith('prod-jumia-') ||
+            (typeof raw.sku === 'string' && raw.sku.includes('HEALTH')) ||
+            (Array.isArray(raw.tags) && raw.tags.includes('First Aid'))
           ) {
             return;
           }
-          if (prod.images) {
-            prod.images = prod.images.map((img: string) =>
-              typeof img === 'string' && img.startsWith('/src/assets/images/')
-                ? img.replace('/src/assets/images/', '/assets/images/')
-                : img
-            );
-          }
-          liveProducts.push(prod);
+          const normalizedImages = Array.isArray(raw.images)
+            ? raw.images
+                .filter((img): img is string => typeof img === 'string' && img.length > 0)
+                .map((img: string) =>
+                  img.startsWith('/src/assets/images/')
+                    ? img.replace('/src/assets/images/', '/assets/images/')
+                    : img
+                )
+            : [];
+          liveProducts.push({
+            ...raw,
+            id: prodId,
+            images: normalizedImages,
+            videos: Array.isArray(raw.videos)
+              ? raw.videos.filter((v): v is string => typeof v === 'string' && v.length > 0)
+              : undefined,
+            tags: Array.isArray(raw.tags)
+              ? raw.tags.filter((t): t is string => typeof t === 'string')
+              : undefined,
+          } as Product);
         });
-        setProducts(liveProducts);
+        if (liveProducts.length > 0) {
+          setProducts(liveProducts);
+        }
       }
     }, (err) => {
       console.warn('Real-time products snapshot notice:', err);
@@ -347,6 +401,16 @@ export default function App() {
       }
     }, (err) => {
       console.warn('Real-time orders snapshot notice:', err);
+    });
+
+    // Real-time listener for service bookings
+    const unsubBookings = onSnapshot(collection(db, 'serviceBookings'), (snapshot) => {
+      const liveBookings: ServiceBooking[] = [];
+      snapshot.forEach((d) => liveBookings.push(d.data() as ServiceBooking));
+      liveBookings.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      setServiceBookings(liveBookings);
+    }, (err) => {
+      console.warn('Service bookings snapshot notice:', err);
     });
 
     // Auth state listener
@@ -390,6 +454,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyShortcut);
       unsubProducts();
       unsubOrders();
+      unsubBookings();
       unsubAuth();
     };
   }, []);
@@ -507,26 +572,55 @@ export default function App() {
 
   const handleDirectDm = (product: Product) => {
     const text = encodeURIComponent(
-      `Hello Unitworld Sarl, I am interested in: ${product.title}\nPrice: ${formatCurrency(product.price)}\nSKU: ${product.sku}\nPlease let me know inspection and acquisition details.`
+      `Hello Unitworld Sarl (07070554285), I am interested in: ${product.title}\nPrice: ${formatCurrency(product.price)}\nSKU: ${product.sku}\nPlease let me know inspection and acquisition details.`
     );
-    window.open(`https://wa.me/2348008648967?text=${text}`, '_blank');
+    const link = document.createElement('a');
+    link.href = `https://wa.me/2347070554285?text=${text}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.click();
+  };
+
+  const handleSubmitServiceBooking = async (booking: ServiceBooking): Promise<ServiceBooking> => {
+    const saved = await createServiceBookingInDb(booking);
+    setServiceBookings((prev) => [saved, ...prev.filter((b) => b.id !== saved.id)]);
+
+    const notif: AppNotification = {
+      id: `notif-srv-${Date.now()}`,
+      userId: booking.userId || currentUser?.uid || 'guest',
+      title: `Service Booked (${saved.bookingCode})`,
+      message: `${saved.serviceCategory} requested at ${saved.location}. Hotline: 07070554285.`,
+      type: 'system',
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    setNotifications((prev) => [notif, ...prev]);
+    setActiveToast(notif);
+    return saved;
   };
 
   // Filter & Search Logic
   const filteredProducts = products.filter((p) => {
+    const cat = typeof p.category === 'string' ? p.category : '';
+    const title = typeof p.title === 'string' ? p.title : '';
+    const desc = typeof p.description === 'string' ? p.description : '';
+    const sku = typeof p.sku === 'string' ? p.sku : '';
+    const tags = Array.isArray(p.tags) ? p.tags : [];
+
     const matchesCategory =
       selectedCategory === 'All Departments' ||
-      p.category.toLowerCase() === selectedCategory.toLowerCase() ||
-      (selectedCategory === 'Hair & Luxury Wigs' && (p.category === 'Hair & Luxury Wigs' || (p.tags && p.tags.includes('Human Hair Wig')))) ||
-      (selectedCategory === 'Beauty & Personal Care' && (p.category === 'Hair & Luxury Wigs' || p.category === 'Beauty & Personal Care'));
+      cat.toLowerCase() === selectedCategory.toLowerCase() ||
+      (selectedCategory === 'Hair & Luxury Wigs' && (cat === 'Hair & Luxury Wigs' || tags.includes('Human Hair Wig'))) ||
+      (selectedCategory === 'Beauty & Personal Care' && (cat === 'Hair & Luxury Wigs' || cat === 'Beauty & Personal Care'));
 
+    const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
-      !searchQuery.trim() ||
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.description ? p.description.toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.tags && p.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-      (p.sku ? p.sku.toLowerCase().includes(searchQuery.toLowerCase()) : false);
+      !q ||
+      title.toLowerCase().includes(q) ||
+      desc.toLowerCase().includes(q) ||
+      cat.toLowerCase().includes(q) ||
+      tags.some((t) => typeof t === 'string' && t.toLowerCase().includes(q)) ||
+      sku.toLowerCase().includes(q);
 
     const matchesCondition =
       conditionFilter === 'all' || p.condition === conditionFilter;
@@ -551,11 +645,14 @@ export default function App() {
 
   // Category subsets for curated homepage sections
   const carProducts = products.filter((p) => p.category === 'Automobiles & Cars');
-  const hairProducts = products.filter((p) => p.category === 'Hair & Luxury Wigs' || (p.tags && p.tags.includes('Human Hair Wig')));
+  const hairProducts = products.filter((p) => p.category === 'Hair & Luxury Wigs' || (Array.isArray(p.tags) && p.tags.includes('Human Hair Wig')));
   const fashionProducts = products.filter((p) => p.category === 'Fashion');
   const groceryProducts = products.filter((p) => p.category === 'Supermarket & Raw Foods');
   const techProducts = products.filter((p) => p.category === 'Phones & Tablets' || p.category === 'Electronics');
-  const everydayProducts = products.filter((p) => p.category === 'Appliances' || p.tags?.includes('Household') || p.id.startsWith('prod-indomie-') || p.id.startsWith('prod-oraimo-') || p.id.startsWith('prod-itel-') || p.id.startsWith('prod-nivea-') || p.id.startsWith('prod-golden-') || p.id.startsWith('prod-milo-') || p.id.startsWith('prod-morningfresh-') || p.id.startsWith('prod-silvercrest-') || p.id.startsWith('prod-binatone-'));
+  const everydayProducts = products.filter((p) => {
+    const id = typeof p.id === 'string' ? p.id : '';
+    return p.category === 'Appliances' || (Array.isArray(p.tags) && p.tags.includes('Household')) || id.startsWith('prod-indomie-') || id.startsWith('prod-oraimo-') || id.startsWith('prod-itel-') || id.startsWith('prod-nivea-') || id.startsWith('prod-golden-') || id.startsWith('prod-milo-') || id.startsWith('prod-morningfresh-') || id.startsWith('prod-silvercrest-') || id.startsWith('prod-binatone-');
+  });
 
   // 0. Dedicated Full-Page Admin Dashboard View (Not a Modal)
   if (isAdminOpen) {
@@ -623,6 +720,13 @@ export default function App() {
             prev.map((a) => (a.id === adminId ? { ...a, isActive } : a))
           );
         }}
+        serviceBookings={serviceBookings}
+        onUpdateServiceBookingStatus={async (bookingId, status) => {
+          await updateServiceBookingStatusInDb(bookingId, status);
+          setServiceBookings((prev) =>
+            prev.map((b) => (b.id === bookingId ? { ...b, status, updatedAt: new Date().toISOString() } : b))
+          );
+        }}
       />
     );
   }
@@ -640,23 +744,37 @@ export default function App() {
         onOpenDashboard={openDashboardModal}
         onSelectCategory={(cat) => {
           setProductPageProduct(null);
+          setIsServicesOpen(false);
           setSelectedCategory(cat);
-          setMobileTab('shop');
+          setMobileTab('categories');
+          navigateTo('/');
         }}
         selectedCategory={selectedCategory}
         searchQuery={searchQuery}
         onSearchChange={(q) => {
           if (productPageProduct) setProductPageProduct(null);
+          if (isServicesOpen) setIsServicesOpen(false);
           setSearchQuery(q);
         }}
         onOpenTracking={openTrackingModal}
         notifications={notifications}
         onGoHome={handleBackFromProductPage}
         onOpenAdmin={openAdminModal}
+        onOpenServices={handleOpenServicesPage}
+        isServicesActive={isServicesOpen}
       />
 
-      {/* 2. Main Content Body or Dedicated Product Page */}
-      {productPageProduct ? (
+      {/* 2. Main Content Body: Dedicated Services Page, Product Page, or Storefront Home */}
+      {isServicesOpen ? (
+        <ServicesPage
+          initialCategoryId={servicesCategoryId}
+          userId={currentUser?.uid}
+          defaultCustomerName={currentUser?.displayName || ''}
+          defaultCustomerPhone={currentUser?.phone || ''}
+          onBack={handleBackFromProductPage}
+          onSubmitBooking={handleSubmitServiceBooking}
+        />
+      ) : productPageProduct ? (
         <ProductPage
           product={productPageProduct}
           allProducts={products}
@@ -694,51 +812,15 @@ export default function App() {
               </div>
             </div>
 
-            {/* Central Campaign Hero Banner */}
-            <div className="lg:col-span-6 relative rounded-2xl overflow-hidden min-h-[300px] sm:min-h-[360px] bg-slate-900 border border-slate-800 shadow-md flex flex-col justify-end p-6 sm:p-8">
-              <img
-                src="/assets/images/hero_marketplace_banner.jpg"
-                alt="Unitworld Sarl Official Direct Store"
-                referrerPolicy="no-referrer"
-                className="absolute inset-0 w-full h-full object-cover opacity-60"
+            {/* Central New Products Carousel Header */}
+            <div className="lg:col-span-6">
+              <NewProductsHeroCarousel
+                products={products}
+                onSelectProduct={handleSelectProduct}
+                onAddToCart={(prod) => handleAddToCart(prod, 1)}
+                onBrowseCategory={(cat) => setSelectedCategory(cat)}
+                onOpenServices={() => handleOpenServicesPage()}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-
-              <div className="relative z-10 space-y-3">
-                <span className="bg-[#0284C7] text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded shadow-xs inline-block">
-                  UNITWORLD SARL OFFICIAL DIRECT STORE
-                </span>
-                <h1 className="font-playfair text-xl sm:text-3xl font-bold text-white leading-tight text-balance">
-                  Luxury Vehicles, Fashion Wear, Tech & Farm Produce
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
-                  Direct sales of verified Tokunbo & Registered cars with physical Lagos inspection, designer fashion sets flat ₦25,000, tech & groceries — all sold directly by Unitworld Sarl with direct payment and no escrow.
-                </p>
-
-                <div className="pt-2 flex flex-wrap gap-2.5">
-                  <button
-                    onClick={() => setSelectedCategory('Automobiles & Cars')}
-                    className="py-2.5 px-4 bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-                  >
-                    <Car className="w-4 h-4" />
-                    <span>View Motors Showroom</span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedCategory('Hair & Luxury Wigs')}
-                    className="py-2.5 px-4 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Luxury Wigs & Hair</span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedCategory('Fashion')}
-                    className="py-2.5 px-4 bg-white/90 hover:bg-white text-slate-900 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-                  >
-                    <Shirt className="w-4 h-4" />
-                    <span>Fashion Hub (₦25,000)</span>
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* Right Mini Cards (Spotlight Cards) */}
@@ -793,6 +875,21 @@ export default function App() {
                 </div>
               </div>
             </div>
+            {/* Hero Section Video (if uploaded by admin) */}
+            {brandSettings.sectionVideos?.hero && (
+              <div className="lg:col-span-12 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-md">
+                <div className="aspect-video max-h-[420px] w-full">
+                  <MediaViewer
+                    url={brandSettings.sectionVideos.hero}
+                    isVideo={true}
+                    controls={true}
+                    muted={true}
+                    loop={true}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
+            )}
           </section>
         )}
 
@@ -823,6 +920,19 @@ export default function App() {
               </button>
             </div>
 
+            {brandSettings.sectionVideos?.automobiles && (
+              <div className="rounded-xl overflow-hidden bg-black border border-slate-200 aspect-video max-h-[360px]">
+                <MediaViewer
+                  url={brandSettings.sectionVideos.automobiles}
+                  isVideo={true}
+                  controls={true}
+                  muted={true}
+                  loop={true}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {carProducts.map((car) => (
                 <ProductCard
@@ -834,6 +944,17 @@ export default function App() {
                 />
               ))}
             </div>
+
+            <QuickServiceStrip
+              title="Need a Mechanic, Auto AC Tech, or Pre-Purchase Inspector?"
+              subtitle="Book a certified mobile vehicle technician — just share your location and what you need checked."
+              defaultCategoryId="auto-mechanic"
+              allowedCategoryIds={['auto-mechanic', 'electrical', 'welding-fabrication']}
+              sourceSection="homepage_automobiles"
+              userId={currentUser?.uid}
+              onSubmitBooking={handleSubmitServiceBooking}
+              onOpenFullServicesPage={(catId) => handleOpenServicesPage(catId)}
+            />
           </section>
         )}
 
@@ -866,6 +987,19 @@ export default function App() {
               </div>
             </div>
 
+            {brandSettings.sectionVideos?.everyday && (
+              <div className="rounded-xl overflow-hidden bg-black border border-slate-200 aspect-video max-h-[360px]">
+                <MediaViewer
+                  url={brandSettings.sectionVideos.everyday}
+                  isVideo={true}
+                  controls={true}
+                  muted={true}
+                  loop={true}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
               {everydayProducts.slice(0, 6).map((item) => (
                 <ProductCard
@@ -893,6 +1027,17 @@ export default function App() {
                 </div>
               </div>
             )}
+
+            <QuickServiceStrip
+              title="Book a Plumber, Carpenter, Electrician or AC Technician"
+              subtitle="Fast home & office repairs — enter your location and details of what needs fixing or built."
+              defaultCategoryId="plumbing"
+              allowedCategoryIds={['carpentry', 'plumbing', 'electrical', 'ac-appliances', 'painting-renovation', 'cleaning-fumigation', 'welding-fabrication']}
+              sourceSection="homepage_everyday_essentials"
+              userId={currentUser?.uid}
+              onSubmitBooking={handleSubmitServiceBooking}
+              onOpenFullServicesPage={(catId) => handleOpenServicesPage(catId)}
+            />
           </section>
         )}
 
@@ -929,6 +1074,19 @@ export default function App() {
                 </button>
               </div>
             </div>
+
+            {brandSettings.sectionVideos?.hair && (
+              <div className="rounded-xl overflow-hidden bg-black border border-rose-200 aspect-video max-h-[360px]">
+                <MediaViewer
+                  url={brandSettings.sectionVideos.hair}
+                  isVideo={true}
+                  controls={true}
+                  muted={true}
+                  loop={true}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
               {hairProducts.map((hair) => (
@@ -974,6 +1132,19 @@ export default function App() {
               </button>
             </div>
 
+            {brandSettings.sectionVideos?.fashion && (
+              <div className="rounded-xl overflow-hidden bg-black border border-slate-200 aspect-video max-h-[360px]">
+                <MediaViewer
+                  url={brandSettings.sectionVideos.fashion}
+                  isVideo={true}
+                  controls={true}
+                  muted={true}
+                  loop={true}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
               {fashionProducts.map((item) => (
                 <ProductCard
@@ -1015,6 +1186,19 @@ export default function App() {
               </button>
             </div>
 
+            {brandSettings.sectionVideos?.groceries && (
+              <div className="rounded-xl overflow-hidden bg-black border border-slate-200 aspect-video max-h-[360px]">
+                <MediaViewer
+                  url={brandSettings.sectionVideos.groceries}
+                  isVideo={true}
+                  controls={true}
+                  muted={true}
+                  loop={true}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {groceryProducts.map((gro) => (
                 <ProductCard
@@ -1026,6 +1210,16 @@ export default function App() {
                 />
               ))}
             </div>
+
+            <QuickServiceStrip
+              title="Custom Kitchen Carpentry, Plumbing & Deep Cleaning"
+              subtitle="Setting up a kitchen, store, or home? Submit your location & details below or browse all sub-services."
+              defaultCategoryId="carpentry"
+              sourceSection="homepage_groceries_home"
+              userId={currentUser?.uid}
+              onSubmitBooking={handleSubmitServiceBooking}
+              onOpenFullServicesPage={(catId) => handleOpenServicesPage(catId)}
+            />
           </section>
         )}
 
@@ -1122,7 +1316,8 @@ export default function App() {
       <Footer 
         logoUrl={brandSettings.logoUrl} 
         onOpenAdmin={openAdminModal} 
-        onOpenRefundPolicy={openRefundPolicyModal} 
+        onOpenRefundPolicy={openRefundPolicyModal}
+        onOpenServices={handleOpenServicesPage}
       />
 
       {/* 8. Mobile Bottom Navigation */}
@@ -1134,10 +1329,15 @@ export default function App() {
           else if (tab === 'account') {
             if (currentUser) openDashboardModal();
             else openAuthModal();
+          } else if (tab === 'services') {
+            handleOpenServicesPage();
           } else if (tab === 'categories') {
+            setIsServicesOpen(false);
+            setProductPageProduct(null);
             setSelectedCategory('All Departments');
-          } else if (tab === 'shop') {
-            setSelectedCategory('Automobiles & Cars');
+            navigateTo('/');
+          } else if (tab === 'home') {
+            handleBackFromProductPage();
           }
         }}
         cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)}

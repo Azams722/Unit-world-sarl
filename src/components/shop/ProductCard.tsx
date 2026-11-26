@@ -26,9 +26,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const omittedSet = new Set(product.omittedFields || []);
   const isFieldOmitted = (field: string) => omittedSet.has(field);
 
-  const hasUploadedMedia = (product.images && product.images.length > 0) || (product.videos && product.videos.length > 0);
-  const imagesList = product.images && product.images.length > 0
-    ? product.images
+  const imagesList = Array.isArray(product.images)
+    ? product.images.filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
     : [];
 
   const hasGallery = imagesList.length > 1;
@@ -191,7 +190,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           {/* Rating (Only if NOT omitted) */}
-          {!isFieldOmitted('rating') && product.rating !== undefined && (
+          {!isFieldOmitted('rating') && typeof product.rating === 'number' && Number.isFinite(product.rating) && (
             <div className="flex items-center gap-1.5 mt-2">
               <div className="flex items-center text-amber-400">
                 <Star className="w-3.5 h-3.5 fill-amber-400" />

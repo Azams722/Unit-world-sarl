@@ -27,27 +27,31 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   fallbackSrc = 'https://res.cloudinary.com/dgc6ootad/image/upload/v1790464730/Unitworld_Trustworthy_Ecommerce_Marketplace_rmlqq8.png',
   onClick,
 }) => {
-  const cleanUrl = React.useMemo(() => {
-    if (!url) return '';
-    if (url.startsWith('/src/assets/images/')) {
-      return url.replace('/src/assets/images/', '/assets/images/');
-    }
-    if (url.startsWith('src/assets/images/')) {
-      return url.replace('src/assets/images/', '/assets/images/');
-    }
-    return url;
-  }, [url]);
+  const safeUrl = typeof url === 'string' ? url : '';
 
-  const [resolvedSrc, setResolvedSrc] = useState<string>(cleanUrl.startsWith('idb:') ? '' : cleanUrl);
+  const cleanUrl = React.useMemo(() => {
+    if (!safeUrl) return '';
+    if (safeUrl.startsWith('/src/assets/images/')) {
+      return safeUrl.replace('/src/assets/images/', '/assets/images/');
+    }
+    if (safeUrl.startsWith('src/assets/images/')) {
+      return safeUrl.replace('src/assets/images/', '/assets/images/');
+    }
+    return safeUrl;
+  }, [safeUrl]);
+
+  const isAsyncMedia = cleanUrl.startsWith('idb:') || cleanUrl.startsWith('fs:video:');
+  const [resolvedSrc, setResolvedSrc] = useState<string>(isAsyncMedia ? '' : cleanUrl);
   const [hasError, setHasError] = useState(false);
   const [fallbackFailed, setFallbackFailed] = useState(false);
-  const [loading, setLoading] = useState(cleanUrl.startsWith('idb:'));
+  const [loading, setLoading] = useState(isAsyncMedia);
 
   useEffect(() => {
     let isMounted = true;
 
-    if (cleanUrl.startsWith('idb:')) {
+    if (isAsyncMedia) {
       setLoading(true);
+      setHasError(false);
       resolveMediaUrl(cleanUrl).then((res) => {
         if (isMounted) {
           if (res) {
@@ -67,15 +71,16 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [cleanUrl]);
+  }, [cleanUrl, isAsyncMedia]);
 
   const actualIsVideo = isVideo || 
-    url.includes('video') || 
-    url.endsWith('.mp4') || 
-    url.endsWith('.webm') || 
-    url.endsWith('.mov') || 
-    url.startsWith('idb:video:') ||
-    url.startsWith('data:video/');
+    safeUrl.includes('video') || 
+    safeUrl.endsWith('.mp4') || 
+    safeUrl.endsWith('.webm') || 
+    safeUrl.endsWith('.mov') || 
+    safeUrl.startsWith('idb:video:') ||
+    safeUrl.startsWith('fs:video:') ||
+    safeUrl.startsWith('data:video/');
 
   if (loading) {
     return (

@@ -44,10 +44,11 @@ import {
   CreditCard,
   Lock,
   Building2,
-  Bot
+  Bot,
+  Wrench
 } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
-import { Product, Order, GatewaySettings, BrandSettings, OrderStatus, AdminUser, UserProfile } from '../../types';
+import { Product, Order, GatewaySettings, BrandSettings, OrderStatus, AdminUser, UserProfile, ServiceBooking, ServiceBookingStatus } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { CATEGORIES } from '../../data/initialProducts';
 import { UnitworldLogo } from '../common/UnitworldLogo';
@@ -63,7 +64,12 @@ import {
   registerUserCredential,
   verifyUserCredential
 } from '../../firebase';
-import { processMediaFile, recompressDataUrl } from '../../utils/mediaStorage';
+import {
+  processMediaFile,
+  recompressDataUrl,
+  STORE_VIDEO_SECTIONS,
+  MAX_VIDEO_SIZE_BYTES,
+} from '../../utils/mediaStorage';
 import { MediaViewer } from '../common/MediaViewer';
 import { MediaUploaderModal } from './MediaUploaderModal';
 import { ProductBotPanel } from './ProductBotPanel';
@@ -124,6 +130,8 @@ interface AdminPortalProps {
   onToggleAdminStatus: (adminId: string, isActive: boolean) => Promise<void>;
   onMakeCurrentUserAdmin?: () => void;
   onUpdateUser?: (updated: UserProfile) => Promise<void>;
+  serviceBookings?: ServiceBooking[];
+  onUpdateServiceBookingStatus?: (bookingId: string, status: ServiceBookingStatus) => Promise<void>;
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({
@@ -150,8 +158,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onToggleAdminStatus,
   onMakeCurrentUserAdmin,
   onUpdateUser,
+  serviceBookings = [],
+  onUpdateServiceBookingStatus,
 }) => {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'bot' | 'media' | 'orders' | 'users' | 'admins' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'products' | 'bot' | 'media' | 'orders' | 'bookings' | 'users' | 'admins' | 'settings'>('products');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccessMsg, setSyncSuccessMsg] = useState('');
   const [isBatchMediaOpen, setIsBatchMediaOpen] = useState(false);
@@ -159,6 +169,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [selectedMediaProductId, setSelectedMediaProductId] = useState<string>('');
   const [mediaTabStatus, setMediaTabStatus] = useState<string | null>(null);
   const [mediaTabUploading, setMediaTabUploading] = useState(false);
+  const [sectionVideoBusyKey, setSectionVideoBusyKey] = useState<string | null>(null);
+  const [sectionVideoError, setSectionVideoError] = useState<string | null>(null);
 
   // User management states
   const [userSearch, setUserSearch] = useState('');
@@ -404,7 +416,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 {
                   id: 'addr-1',
                   fullName: 'Unitworld Operations',
-                  phone: '+234 800 8648 967',
+                  phone: '07070554285',
                   street: '14B Admiralty Way, Lekki Phase 1',
                   city: 'Lagos',
                   state: 'Lagos State',
@@ -585,6 +597,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       supportEmail: brandEmail,
       whatsappNumber: brandWhatsApp,
       address: brandAddress,
+      sectionVideos: brandSettings.sectionVideos || {},
     });
     setSyncSuccessMsg('Official Unitworld brand settings & logo were saved to Firebase database!');
     setTimeout(() => setSyncSuccessMsg(''), 5000);
@@ -931,13 +944,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         mergedImages.push(pendingImg);
       }
 
+      const isUploadedVideoUri = (u: string) => u.startsWith('idb:video:') || u.startsWith('fs:video:');
       let finalImages: string[] = mergedImages.length > 0
-        ? mergedImages.filter(img => !img.startsWith('idb:video:'))
+        ? mergedImages.filter(img => !isUploadedVideoUri(img))
         : ['/assets/images/hero_marketplace_banner.jpg'];
 
       const mergedVideos = [
         ...formVideos,
-        ...mergedImages.filter(img => img.startsWith('idb:video:'))
+        ...mergedImages.filter(isUploadedVideoUri)
       ].filter((v, idx, arr) => arr.indexOf(v) === idx);
 
       const mergedTags = [...formTags];
@@ -1441,6 +1455,22 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
           <button
             onClick={() => {
+              setActiveTab('bookings');
+              setEditingProduct(null);
+              setIsCreatingProduct(false);
+            }}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'bookings'
+                ? 'border-[#0284C7] text-[#0284C7] bg-white'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Wrench className="w-4 h-4 text-[#0284C7]" />
+            <span>Service Bookings ({serviceBookings.length})</span>
+          </button>
+
+          <button
+            onClick={() => {
               setActiveTab('users');
               setEditingProduct(null);
               setIsCreatingProduct(false);
@@ -1677,7 +1707,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           Upload Photos & Videos for "{currentSelectedProduct.title}"
                         </h4>
                         <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                          Select multiple mobile images (JPG, PNG, WEBP) or recordings (MP4, WEBM). Files will be compressed & stored permanently in the database.
+                          Select mobile photos (JPG, PNG, WEBP) or showcase videos (MP4, WebM, MOV — <strong>2MB max per video</strong>). Files are compressed & synced to Firestore so all visitors can view and play them.
                         </p>
                       </div>
 
@@ -1787,6 +1817,145 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* Storefront Section Showcase Videos (2MB Max per Section) */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200">
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                        <Film className="w-4 h-4 text-rose-600" />
+                        <span>Storefront Section Showcase Videos (2MB Max per Section)</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Optionally attach a 2MB max MP4/WebM/MOV highlight video to specific storefront sections. Visitors will see and play it directly inside that section.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-black bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full shrink-0">
+                      Max 2MB / Video
+                    </span>
+                  </div>
+
+                  {sectionVideoError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-medium">
+                      {sectionVideoError}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {STORE_VIDEO_SECTIONS.map((sec) => {
+                      const currentVideoUrl = brandSettings.sectionVideos?.[sec.key] || '';
+                      const isBusy = sectionVideoBusyKey === sec.key;
+
+                      return (
+                        <div
+                          key={sec.key}
+                          className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-3"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span className="text-xs font-bold text-slate-900">{sec.label}</span>
+                              {currentVideoUrl && (
+                                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+
+                            {currentVideoUrl ? (
+                              <div className="relative aspect-video rounded-lg overflow-hidden bg-black border border-slate-300">
+                                <MediaViewer
+                                  url={currentVideoUrl}
+                                  isVideo={true}
+                                  controls={true}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                            ) : (
+                              <div className="aspect-video rounded-lg border border-dashed border-slate-300 bg-white flex flex-col items-center justify-center text-slate-400 text-[11px] p-3 text-center">
+                                <Film className="w-5 h-5 mb-1 text-slate-300" />
+                                <span>No video assigned to this section</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <label className="flex-1 py-2 px-3 bg-[#0284C7] hover:bg-[#0369a1] text-white font-bold rounded-lg text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>{isBusy ? 'Uploading...' : currentVideoUrl ? 'Replace (2MB Max)' : 'Upload Video (2MB Max)'}</span>
+                              <input
+                                type="file"
+                                accept="video/mp4,video/webm,video/quicktime,video/*"
+                                disabled={isBusy}
+                                className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  e.target.value = '';
+                                  if (!file) return;
+                                  setSectionVideoError(null);
+                                  if (file.size > MAX_VIDEO_SIZE_BYTES) {
+                                    setSectionVideoError(
+                                      `Video "${file.name}" is ${(file.size / (1024 * 1024)).toFixed(2)}MB. Maximum allowed video size is 2MB.`
+                                    );
+                                    return;
+                                  }
+                                  setSectionVideoBusyKey(sec.key);
+                                  try {
+                                    const processed = await processMediaFile(file);
+                                    const nextVideos = {
+                                      ...(brandSettings.sectionVideos || {}),
+                                      [sec.key]: processed.url,
+                                    };
+                                    await onSaveBrandSettings({
+                                      ...brandSettings,
+                                      sectionVideos: nextVideos,
+                                    });
+                                    setMediaTabStatus(`Uploaded showcase video for "${sec.label}"!`);
+                                    setTimeout(() => setMediaTabStatus(null), 4000);
+                                  } catch (err: any) {
+                                    setSectionVideoError(err?.message || 'Failed to upload section video.');
+                                  } finally {
+                                    setSectionVideoBusyKey(null);
+                                  }
+                                }}
+                              />
+                            </label>
+
+                            {currentVideoUrl && (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={async () => {
+                                  setSectionVideoBusyKey(sec.key);
+                                  setSectionVideoError(null);
+                                  try {
+                                    const nextVideos = {
+                                      ...(brandSettings.sectionVideos || {}),
+                                      [sec.key]: '',
+                                    };
+                                    await onSaveBrandSettings({
+                                      ...brandSettings,
+                                      sectionVideos: nextVideos,
+                                    });
+                                    setMediaTabStatus(`Removed video from "${sec.label}".`);
+                                    setTimeout(() => setMediaTabStatus(null), 3000);
+                                  } catch (err: any) {
+                                    setSectionVideoError(err?.message || 'Failed to remove section video.');
+                                  } finally {
+                                    setSectionVideoBusyKey(null);
+                                  }
+                                }}
+                                className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg cursor-pointer"
+                                title="Remove section video"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             );
           })()}
@@ -2479,7 +2648,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
                         <label className="py-2 px-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
                           <Upload className="w-3.5 h-3.5 text-sky-400" />
-                          <span>{isUploadingFormMedia ? 'Processing Media...' : 'Upload Photos / Video'}</span>
+                          <span>{isUploadingFormMedia ? 'Uploading Media...' : 'Photos / Video (2MB Max)'}</span>
                           <input
                             type="file"
                             accept="image/*,video/*"
@@ -3819,6 +3988,96 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   </button>
                 </form>
               </div>
+            </div>
+          )}
+
+          {/* TAB: SERVICE BOOKINGS (Carpentry, Plumbing, Electrical, Auto, Cleaning) */}
+          {activeTab === 'bookings' && (
+            <div className="space-y-4">
+              <div className="bg-white p-5 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Wrench className="w-5 h-5 text-[#0284C7]" />
+                    Customer Service Bookings & Dispatch
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Incoming Carpentry, Plumbing, Electrical, Auto Mechanic, Painting & Cleaning requests submitted from homepage and Services page.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-slate-700 tabular-nums">
+                  Total Requests: {serviceBookings.length}
+                </span>
+              </div>
+
+              {serviceBookings.length === 0 ? (
+                <div className="bg-white rounded-xl border border-slate-200 p-10 text-center space-y-2">
+                  <Wrench className="w-10 h-10 text-slate-300 mx-auto" />
+                  <p className="text-sm font-bold text-slate-800">No service bookings yet</p>
+                  <p className="text-xs text-slate-500">
+                    When customers submit a location and work request from the storefront or Services page, it appears here live.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100/80 text-slate-600 border-b border-slate-200 uppercase font-mono text-[10px]">
+                        <tr>
+                          <th className="p-3.5">Booking Ref</th>
+                          <th className="p-3.5">Trade & Task</th>
+                          <th className="p-3.5">Location</th>
+                          <th className="p-3.5">Request Details</th>
+                          <th className="p-3.5">Contact & Timing</th>
+                          <th className="p-3.5">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {serviceBookings.map((bk) => (
+                          <tr key={bk.id} className="hover:bg-sky-50/40 align-top">
+                            <td className="p-3.5 whitespace-nowrap">
+                              <p className="font-mono font-bold text-slate-900">{bk.bookingCode}</p>
+                              <p className="text-[11px] text-slate-400 mt-0.5">{formatDate(bk.createdAt)}</p>
+                            </td>
+                            <td className="p-3.5">
+                              <p className="font-bold text-slate-900">{bk.serviceCategory}</p>
+                              <p className="text-[11px] text-[#0284C7] font-semibold mt-0.5">{bk.subService}</p>
+                            </td>
+                            <td className="p-3.5 font-semibold text-slate-800 max-w-xs">
+                              {bk.location}
+                            </td>
+                            <td className="p-3.5 text-slate-600 max-w-sm leading-relaxed">
+                              {bk.details}
+                            </td>
+                            <td className="p-3.5 whitespace-nowrap">
+                              <p className="font-semibold text-slate-800 tabular-nums">
+                                {bk.customerPhone || 'Call via 07070554285'}
+                              </p>
+                              <p className="text-[11px] text-slate-500 mt-0.5">{bk.urgency || 'Flexible'}</p>
+                            </td>
+                            <td className="p-3.5">
+                              <select
+                                value={bk.status}
+                                onChange={(e) => {
+                                  if (onUpdateServiceBookingStatus) {
+                                    onUpdateServiceBookingStatus(bk.id, e.target.value as ServiceBookingStatus);
+                                  }
+                                }}
+                                className="px-2.5 py-1.5 text-xs font-bold border border-slate-300 rounded-lg bg-slate-50 text-slate-900"
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="assigned">Technician Assigned</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

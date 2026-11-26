@@ -154,6 +154,27 @@ export interface BrandSettings {
   supportEmail: string;
   whatsappNumber: string;
   address: string;
+  sectionVideos?: Record<string, string>;
   updatedAt?: string;
 }
+
+export type ServiceBookingStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface ServiceBooking {
+  id: string;
+  bookingCode: string;
+  serviceCategory: string;
+  subService: string;
+  location: string;
+  details: string;
+  customerPhone?: string;
+  customerName?: string;
+  urgency?: string;
+  sourceSection?: string;
+  userId?: string;
+  status: ServiceBookingStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
 

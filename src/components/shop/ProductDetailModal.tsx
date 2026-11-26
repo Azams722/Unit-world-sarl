@@ -47,13 +47,15 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const isVideoUrl = (url: string) => {
-    if (!url) return false;
+    if (!url || typeof url !== 'string') return false;
     return (
       url.endsWith('.mp4') ||
       url.endsWith('.webm') ||
       url.endsWith('.mov') ||
       url.includes('gtv-videos-bucket') ||
       url.startsWith('data:video/') ||
+      url.startsWith('idb:video:') ||
+      url.startsWith('fs:video:') ||
       url.includes('youtube.com') ||
       url.includes('youtu.be')
     );
@@ -121,9 +123,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const handleWhatsAppDm = () => {
     const text = encodeURIComponent(
-      `Hello Unitworld Sarl, I am interested in: ${product.title}\nPrice: ${formatCurrency(product.price)}\nSKU: ${product.sku || 'N/A'}\nPlease let me know inspection and acquisition details.`
+      `Hello Unitworld Sarl (07070554285), I am interested in: ${product.title}\nPrice: ${formatCurrency(product.price)}\nSKU: ${product.sku || 'N/A'}\nPlease let me know inspection and acquisition details.`
     );
-    window.open(`https://wa.me/2348008648967?text=${text}`, '_blank');
+    const link = document.createElement('a');
+    link.href = `https://wa.me/2347070554285?text=${text}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.click();
   };
 
   const handlePrevImage = (e?: React.MouseEvent) => {
@@ -328,7 +334,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       </span>
                     )}
 
-                    {!isFieldOmitted('rating') && product.rating !== undefined && (
+                    {!isFieldOmitted('rating') && typeof product.rating === 'number' && Number.isFinite(product.rating) && (
                       <div className="flex items-center text-amber-500">
                         <Star className="w-3.5 h-3.5 fill-amber-400" />
                         <span className="font-bold text-slate-900 ml-1">{product.rating.toFixed(1)}</span>

@@ -51,5 +51,68 @@ service cloud.firestore {
     match /test/{docId} {
       allow read, write: if true;
     }
+
+    // CHUNKED 2MB-MAX VIDEO MEDIA STORAGE
+    match /videoMedia/{chunkId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.videoId is string &&
+        request.resource.data.videoId.size() > 0 &&
+        request.resource.data.videoId.size() <= 128 &&
+        request.resource.data.chunkIndex is int &&
+        request.resource.data.chunkIndex >= 0 &&
+        request.resource.data.chunkIndex < 6 &&
+        request.resource.data.totalChunks is int &&
+        request.resource.data.totalChunks >= 1 &&
+        request.resource.data.totalChunks <= 6 &&
+        request.resource.data.mimeType is string &&
+        request.resource.data.mimeType.size() <= 64 &&
+        request.resource.data.size is int &&
+        request.resource.data.size > 0 &&
+        request.resource.data.size <= 2097152 &&
+        request.resource.data.data is bytes &&
+        request.resource.data.data.size() <= 600000;
+      allow delete: if isAdmin();
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidServiceBooking(data) {
+      return data.keys().hasAll(['id', 'bookingCode', 'serviceCategory', 'subService', 'location', 'details', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'bookingCode', 'serviceCategory', 'subService', 'location', 'details', 'customerPhone', 'customerName', 'urgency', 'sourceSection', 'userId', 'status', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.bookingCode is string && data.bookingCode.size() > 0 && data.bookingCode.size() <= 40 &&
+        data.serviceCategory is string && data.serviceCategory.size() > 0 && data.serviceCategory.size() <= 80 &&
+        data.subService is string && data.subService.size() > 0 && data.subService.size() <= 120 &&
+        data.location is string && data.location.size() >= 2 && data.location.size() <= 300 &&
+        data.details is string && data.details.size() >= 3 && data.details.size() <= 2000 &&
+        data.status in ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'] &&
+        data.createdAt is string && data.createdAt.size() <= 40 &&
+        data.updatedAt is string && data.updatedAt.size() <= 40 &&
+        (!('customerPhone' in data) || (data.customerPhone is string && data.customerPhone.size() <= 30)) &&
+        (!('customerName' in data) || (data.customerName is string && data.customerName.size() <= 120)) &&
+        (!('urgency' in data) || (data.urgency is string && data.urgency.size() <= 40)) &&
+        (!('sourceSection' in data) || (data.sourceSection is string && data.sourceSection.size() <= 80)) &&
+        (!('userId' in data) || (data.userId is string && data.userId.size() <= 128));
+    }
+
+    // SERVICE BOOKINGS: Anyone can submit a location + request details; Admins manage dispatch
+    match /serviceBookings/{bookingId} {
+      allow get: if isValidId(bookingId);
+      allow list: if true;
+      allow create: if isValidId(bookingId) &&
+        isValidServiceBooking(request.resource.data) &&
+        request.resource.data.id == bookingId &&
+        request.resource.data.status == 'pending';
+      allow update: if isValidId(bookingId) &&
+        isValidServiceBooking(request.resource.data) &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.bookingCode == resource.data.bookingCode &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']);
+      allow delete: if isAdmin();
+    }
   }
 }
+

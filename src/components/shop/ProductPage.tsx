@@ -52,12 +52,14 @@ export const ProductPage: React.FC<ProductPageProps> = ({
 
   // Helper to determine if a URL represents a video
   const isVideoUrl = (url: string) => {
-    if (!url) return false;
+    if (!url || typeof url !== 'string') return false;
     return (
       url.endsWith('.mp4') ||
       url.endsWith('.webm') ||
       url.endsWith('.mov') ||
       url.startsWith('data:video/') ||
+      url.startsWith('idb:video:') ||
+      url.startsWith('fs:video:') ||
       url.includes('cloudinary.com/dgc6ootad/video/') ||
       url.includes('video/upload')
     );
@@ -193,14 +195,18 @@ export const ProductPage: React.FC<ProductPageProps> = ({
 
   const handleWhatsAppDm = () => {
     const text = encodeURIComponent(
-      `Hello! I am viewing this product on Unitworld:
+      `Hello Unitworld Sarl (07070554285)! I am viewing this product on Unitworld:
 Title: ${product.title}
 Price: ${formatCurrency(product.price)}
 SKU: ${product.sku || 'N/A'}
 Page URL: ${window.location.href}
 Please provide ordering, inspection and delivery confirmation.`
     );
-    window.open(`https://wa.me/2348008648967?text=${text}`, '_blank');
+    const link = document.createElement('a');
+    link.href = `https://wa.me/2347070554285?text=${text}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.click();
   };
 
   const isAutomobile = product.category === 'Automobiles & Cars';
@@ -610,12 +616,12 @@ Please provide ordering, inspection and delivery confirmation.`
 
             {currentMedia?.isVideo ? (
               <div className="max-h-[75vh] max-w-full flex items-center justify-center">
-                <video
+                <MediaViewer
                   key={currentMedia.url}
-                  src={currentMedia.url}
-                  controls
-                  autoPlay
-                  playsInline
+                  url={currentMedia.url}
+                  isVideo={true}
+                  controls={true}
+                  autoPlay={true}
                   className="max-h-[75vh] max-w-full rounded-lg shadow-2xl"
                 />
               </div>

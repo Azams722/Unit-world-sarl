@@ -1,9 +1,9 @@
 import React from 'react';
-import { Home, LayoutGrid, ShoppingCart, User, Truck, Shield } from 'lucide-react';
+import { Home, LayoutGrid, ShoppingCart, User, Wrench } from 'lucide-react';
 
 interface MobileBottomNavProps {
-  currentTab: 'home' | 'categories' | 'shop' | 'cart' | 'account';
-  onSelectTab: (tab: 'home' | 'categories' | 'shop' | 'cart' | 'account') => void;
+  currentTab: 'home' | 'categories' | 'services' | 'cart' | 'account';
+  onSelectTab: (tab: 'home' | 'categories' | 'services' | 'cart' | 'account') => void;
   cartCount: number;
 }
 
@@ -31,17 +31,17 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         }`}
       >
         <LayoutGrid className="w-5 h-5 mb-0.5" />
-        <span>Categories</span>
+        <span>Shop</span>
       </button>
 
       <button
-        onClick={() => onSelectTab('shop')}
+        onClick={() => onSelectTab('services')}
         className={`flex flex-col items-center p-1 text-[10px] font-bold transition-colors ${
-          currentTab === 'shop' ? 'text-[#0284C7]' : 'text-slate-500'
+          currentTab === 'services' ? 'text-[#0284C7]' : 'text-slate-500'
         }`}
       >
-        <Truck className="w-5 h-5 mb-0.5" />
-        <span>Motors & Shop</span>
+        <Wrench className="w-5 h-5 mb-0.5" />
+        <span>Services</span>
       </button>
 
       <button

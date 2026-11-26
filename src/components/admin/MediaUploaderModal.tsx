@@ -131,7 +131,7 @@ export const MediaUploaderModal: React.FC<MediaUploaderModalProps> = ({
       u.startsWith('data:image/') || u.startsWith('idb:') || u.includes('cloudinary.com/dgc6ootad/image/upload/v')
     );
     const strictlyUserVideos = (currentProduct.videos || []).filter((u) =>
-      u.startsWith('data:video/') || u.startsWith('idb:video:') || u.includes('cloudinary.com/dgc6ootad/video/upload/v')
+      u.startsWith('data:video/') || u.startsWith('idb:video:') || u.startsWith('fs:video:') || u.includes('cloudinary.com/dgc6ootad/video/upload/v')
     );
 
     if (strictlyUserImages.length === 0 && strictlyUserVideos.length === 0) {
@@ -267,11 +267,10 @@ export const MediaUploaderModal: React.FC<MediaUploaderModalProps> = ({
             </div>
 
             <h4 className="text-sm sm:text-base font-bold text-slate-800">
-              Drag & Drop Your Uploaded Photos & Videos Here
+              Drag & Drop Your Uploaded Photos & Videos (2MB Max) Here
             </h4>
             <p className="text-xs text-slate-500 max-w-md mt-1">
-              Select multiple files or all 93 WhatsApp photos and videos at once. High-resolution photos are
-              optimized in-browser and videos are stored in the local media vault.
+              Upload multiple product photos and short showcase videos (MP4, WebM, MOV — 2MB max per video). Photos are compressed in-browser and videos sync to Firestore for all visitors.
             </p>
 
             <button

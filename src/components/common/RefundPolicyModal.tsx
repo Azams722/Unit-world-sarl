@@ -230,10 +230,10 @@ export const RefundPolicyModal: React.FC<RefundPolicyModalProps> = ({
                 Our customer care officers and logistics dispatch supervisors are available 24/7.
               </p>
               <div className="flex flex-wrap gap-4 text-xs text-slate-700 pt-1 font-medium">
-                <span className="flex items-center gap-1.5">
+                <a href="tel:07070554285" className="flex items-center gap-1.5 hover:text-[#0284C7] tabular-nums">
                   <PhoneCall className="w-3.5 h-3.5 text-sky-600" />
-                  +234 800 UNITWORLD (0800 8648 967)
-                </span>
+                  <span>07070554285</span>
+                </a>
                 <span className="flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-sky-600" />
                   support@unit-world-sarl.com

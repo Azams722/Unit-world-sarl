@@ -25,10 +25,12 @@ import {
   orderBy, 
   onSnapshot,
   getDocFromServer,
-  writeBatch
+  writeBatch,
+  deleteField,
+  Bytes
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
-import { Product, Order, UserProfile, GatewaySettings, BrandSettings, AppNotification, AdminUser } from './types';
+import { Product, Order, UserProfile, GatewaySettings, BrandSettings, AppNotification, AdminUser, ServiceBooking, ServiceBookingStatus } from './types';
 import { INITIAL_PRODUCTS } from './data/initialProducts';
 
 const app = initializeApp(firebaseConfig);
@@ -184,9 +186,9 @@ export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
   logoUrl: DEFAULT_BRAND_LOGO,
   brandName: 'UNITWORLD SARL',
   tagline: 'OFFICIAL DIRECT STORE.',
-  supportPhone: '+234 800 8648 9675',
+  supportPhone: '07070554285',
   supportEmail: 'contact@unit-world-sarl.com',
-  whatsappNumber: '+234 812 345 6789',
+  whatsappNumber: '07070554285',
   address: 'Victoria Island, Lagos, Nigeria / SARL Headquarters'
 };
 
@@ -252,9 +254,19 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
-// Helper to identify banned health or legacy duplicate product IDs
+// Helper to identify banned, archived, or corrupted/incomplete product documents
 function isExcludedCatalogProduct(prod: Partial<Product>): boolean {
   if (!prod || prod.isArchived) return true;
+  if (
+    typeof prod.title !== 'string' ||
+    !prod.title.trim() ||
+    typeof prod.category !== 'string' ||
+    !prod.category.trim() ||
+    typeof prod.price !== 'number' ||
+    !Number.isFinite(prod.price)
+  ) {
+    return true;
+  }
   if (
     prod.id === 'prod-dettol-antiseptic-1l' ||
     prod.id === 'prod-jumia-dettol-antiseptic-1l' ||
@@ -320,7 +332,8 @@ export async function syncAllProductsToDb(overwriteExisting = true): Promise<Pro
     const snap = await getDocs(collection(db, path));
     const merged: Product[] = [];
     snap.forEach((d) => {
-      const p = d.data() as Product;
+      const raw = d.data() as Partial<Product>;
+      const p = { ...raw, id: raw.id || d.id } as Product;
       if (!isExcludedCatalogProduct(p)) {
         merged.push(p);
       }
@@ -344,7 +357,8 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
     } else {
       const existingIds = new Set<string>();
       productsSnapshot.forEach((d) => {
-        const data = d.data() as Product;
+        const raw = d.data() as Partial<Product>;
+        const data = { ...raw, id: raw.id || d.id } as Product;
         existingIds.add(data.id);
         if (isExcludedCatalogProduct(data)) {
           return;
@@ -388,7 +402,8 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
 
     const loaded: Product[] = [];
     productsSnapshot.forEach((d) => {
-      const prod = d.data() as Product;
+      const raw = d.data() as Partial<Product>;
+      const prod = { ...raw, id: raw.id || d.id } as Product;
       if (isExcludedCatalogProduct(prod)) {
         return;
       }
@@ -396,12 +411,16 @@ export async function seedProductsIfEmpty(): Promise<Product[]> {
         prod.category = 'Beauty & Personal Care';
         updateDoc(d.ref, { category: 'Beauty & Personal Care' }).catch(() => {});
       }
-      if (prod.images) {
-        prod.images = prod.images.map((img: string) =>
-          typeof img === 'string' && img.startsWith('/src/assets/images/')
-            ? img.replace('/src/assets/images/', '/assets/images/')
-            : img
-        );
+      if (Array.isArray(prod.images)) {
+        prod.images = prod.images
+          .filter((img): img is string => typeof img === 'string' && img.length > 0)
+          .map((img: string) =>
+            img.startsWith('/src/assets/images/')
+              ? img.replace('/src/assets/images/', '/assets/images/')
+              : img
+          );
+      } else {
+        prod.images = [];
       }
       loaded.push(prod);
     });
@@ -428,9 +447,21 @@ export async function getBrandSettings(): Promise<BrandSettings> {
     if (snap.exists()) {
       const data = snap.data() as BrandSettings;
       // If the logo in settings is an old local asset or missing, update to user's Cloudinary logo
+      let changed = false;
       if (!data.logoUrl || data.logoUrl.includes('assets/images') || !data.logoUrl.includes('cloudinary.com')) {
         data.logoUrl = DEFAULT_BRAND_LOGO;
-        saveBrandSettings({ ...data, logoUrl: DEFAULT_BRAND_LOGO }).catch(() => {});
+        changed = true;
+      }
+      if (!data.supportPhone || data.supportPhone.includes('8648') || data.supportPhone.includes('800')) {
+        data.supportPhone = '07070554285';
+        changed = true;
+      }
+      if (!data.whatsappNumber || data.whatsappNumber.includes('812 345 6789') || data.whatsappNumber.includes('8648')) {
+        data.whatsappNumber = '07070554285';
+        changed = true;
+      }
+      if (changed) {
+        saveBrandSettings(data).catch(() => {});
       }
       return data;
     }
@@ -443,8 +474,11 @@ export async function getBrandSettings(): Promise<BrandSettings> {
 export async function saveBrandSettings(settings: BrandSettings): Promise<void> {
   const path = 'settings/brand';
   try {
+    const cleanSettings = Object.fromEntries(
+      Object.entries(settings).filter(([, value]) => value !== undefined)
+    );
     await setDoc(doc(db, 'settings', 'brand'), {
-      ...settings,
+      ...cleanSettings,
       updatedAt: new Date().toISOString()
     }, { merge: true });
   } catch (error) {
@@ -537,12 +571,19 @@ export async function createProductInDb(product: Product): Promise<void> {
 export async function updateProductInDb(productId: string, updates: Partial<Product>): Promise<void> {
   const path = `products/${productId}`;
   try {
-    const cleaned = cleanFirestoreData({
+    const cleaned: Record<string, any> = cleanFirestoreData({
       ...updates,
       updatedAt: new Date().toISOString()
     });
-    // setDoc replaces document so omitted fields are truly removed from Firestore
-    await setDoc(doc(db, 'products', productId), cleaned);
+    if (Array.isArray(updates.omittedFields)) {
+      for (const field of updates.omittedFields) {
+        if (field && !(field in cleaned)) {
+          cleaned[field] = deleteField();
+        }
+      }
+    }
+    // Merge updates so partial saves (e.g. Media Vault image/video uploads) never erase title, price, or category
+    await setDoc(doc(db, 'products', productId), cleaned, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
@@ -784,3 +825,149 @@ export async function saveGatewaySettings(settings: GatewaySettings): Promise<vo
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
+
+export const MAX_VIDEO_SIZE_BYTES = 2 * 1024 * 1024; // 2MB hard cap
+const VIDEO_CHUNK_BYTES = 450_000; // Safely under Firestore's 1MB document limit
+
+export async function uploadVideoChunksToDb(videoId: string, file: File): Promise<void> {
+  if (file.size <= 0) {
+    throw new Error(`Video "${file.name}" is empty (0 bytes). Please choose a valid video file.`);
+  }
+  if (file.size > MAX_VIDEO_SIZE_BYTES) {
+    throw new Error(
+      `Video "${file.name}" is ${(file.size / (1024 * 1024)).toFixed(2)}MB. Maximum allowed video size is 2MB.`
+    );
+  }
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const totalChunks = Math.max(1, Math.ceil(bytes.length / VIDEO_CHUNK_BYTES));
+  const mimeType = (file.type || 'video/mp4').slice(0, 64);
+  const createdAt = new Date().toISOString();
+
+  const uploads: Promise<void>[] = [];
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * VIDEO_CHUNK_BYTES;
+    const end = Math.min(bytes.length, start + VIDEO_CHUNK_BYTES);
+    const slice = bytes.slice(start, end);
+    const chunkDocId = `${videoId}_chunk_${i}`;
+    uploads.push(
+      setDoc(doc(db, 'videoMedia', chunkDocId), {
+        videoId,
+        chunkIndex: i,
+        totalChunks,
+        mimeType,
+        size: file.size,
+        data: Bytes.fromUint8Array(slice),
+        createdAt,
+      })
+    );
+  }
+  await Promise.all(uploads);
+}
+
+export async function fetchVideoBlobFromDb(videoId: string): Promise<Blob | null> {
+  try {
+    const q = query(collection(db, 'videoMedia'), where('videoId', '==', videoId));
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+
+    const chunks: Array<{ chunkIndex: number; mimeType: string; bytes: Uint8Array }> = [];
+    snap.forEach((docSnap) => {
+      const d = docSnap.data();
+      if (d?.data && typeof d.chunkIndex === 'number') {
+        const rawBytes =
+          typeof d.data.toUint8Array === 'function'
+            ? d.data.toUint8Array()
+            : new Uint8Array(d.data);
+        chunks.push({
+          chunkIndex: d.chunkIndex,
+          mimeType: typeof d.mimeType === 'string' ? d.mimeType : 'video/mp4',
+          bytes: rawBytes,
+        });
+      }
+    });
+
+    if (chunks.length === 0) return null;
+    chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
+    const mimeType = chunks[0].mimeType || 'video/mp4';
+    const blobParts: BlobPart[] = chunks.map((c) => {
+      const copy = new Uint8Array(c.bytes.byteLength);
+      copy.set(c.bytes);
+      return copy.buffer;
+    });
+    return new Blob(blobParts, { type: mimeType });
+  } catch (err) {
+    console.warn('Firestore video fetch notice:', err);
+    return null;
+  }
+}
+
+// 6. Service Bookings CRUD (Carpentry, Plumbing, Electrical, Auto, Cleaning)
+export async function createServiceBookingInDb(booking: ServiceBooking): Promise<ServiceBooking> {
+  const cleanId = (booking.id || `srv-${Date.now()}`).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 128);
+  const now = new Date().toISOString().slice(0, 40);
+  const payload: Record<string, string> = {
+    id: cleanId,
+    bookingCode: (booking.bookingCode || `UW-SRV-${Math.floor(1000 + Math.random() * 9000)}`).slice(0, 40),
+    serviceCategory: booking.serviceCategory.trim().slice(0, 80),
+    subService: booking.subService.trim().slice(0, 120),
+    location: booking.location.trim().slice(0, 300),
+    details: booking.details.trim().slice(0, 2000),
+    status: 'pending',
+    createdAt: (booking.createdAt || now).slice(0, 40),
+    updatedAt: (booking.updatedAt || now).slice(0, 40),
+  };
+
+  if (booking.customerPhone && booking.customerPhone.trim()) {
+    payload.customerPhone = booking.customerPhone.trim().slice(0, 30);
+  }
+  if (booking.customerName && booking.customerName.trim()) {
+    payload.customerName = booking.customerName.trim().slice(0, 120);
+  }
+  if (booking.urgency && booking.urgency.trim()) {
+    payload.urgency = booking.urgency.trim().slice(0, 40);
+  }
+  if (booking.sourceSection && booking.sourceSection.trim()) {
+    payload.sourceSection = booking.sourceSection.trim().slice(0, 80);
+  }
+  if (booking.userId && booking.userId.trim()) {
+    payload.userId = booking.userId.trim().slice(0, 128);
+  }
+
+  const path = `serviceBookings/${cleanId}`;
+  try {
+    await setDoc(doc(db, 'serviceBookings', cleanId), payload);
+    return payload as unknown as ServiceBooking;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+    throw error;
+  }
+}
+
+export async function getServiceBookingsFromDb(): Promise<ServiceBooking[]> {
+  const path = 'serviceBookings';
+  try {
+    const snap = await getDocs(collection(db, path));
+    const list: ServiceBooking[] = [];
+    snap.forEach((docSnap) => {
+      list.push(docSnap.data() as ServiceBooking);
+    });
+    return list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
+export async function updateServiceBookingStatusInDb(bookingId: string, status: ServiceBookingStatus): Promise<void> {
+  const path = `serviceBookings/${bookingId}`;
+  try {
+    await updateDoc(doc(db, 'serviceBookings', bookingId), {
+      status,
+      updatedAt: new Date().toISOString().slice(0, 40),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
